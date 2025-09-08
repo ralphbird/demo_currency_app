@@ -42,12 +42,12 @@ RUN poetry install --only=main
 # Create directories for data persistence
 RUN mkdir -p /app/data /app/tests/databases
 
-# Expose port
+# Expose port (default 8000, can be overridden with API_PORT environment variable)
 EXPOSE 8000
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD curl -f http://localhost:8000/health || exit 1
+    CMD curl -f http://localhost:${API_PORT:-8000}/health || exit 1
 
 # Run the API
-CMD ["poetry", "run", "uvicorn", "currency_app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD poetry run uvicorn currency_app.main:app --host ${API_HOST:-0.0.0.0} --port ${API_PORT:-8000}

@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Currency Conversion API - Home</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+
+        .container {
+            background: white;
+            border-radius: 12px;
+            padding: 40px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+        }
+
+        h1 {
+            color: #2c3e50;
+            text-align: center;
+            margin-bottom: 10px;
+            font-size: 2.5em;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #7f8c8d;
+            margin-bottom: 40px;
+            font-size: 1.2em;
+        }
+
+        .services-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 30px;
+            margin-bottom: 40px;
+        }
+
+        .service-card {
+            border: 1px solid #e1e8ed;
+            border-radius: 8px;
+            padding: 25px;
+            transition: all 0.3s ease;
+            background: #fff;
+        }
+
+        .service-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            border-color: #667eea;
+        }
+
+        .service-card h3 {
+            color: #2c3e50;
+            margin-top: 0;
+            font-size: 1.4em;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .service-card p {
+            color: #7f8c8d;
+            margin-bottom: 20px;
+        }
+
+        .service-links {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .service-link {
+            display: inline-block;
+            padding: 8px 16px;
+            background: #667eea;
+            color: white;
+            text-decoration: none;
+            border-radius: 6px;
+            font-size: 0.9em;
+            transition: background 0.3s ease;
+        }
+
+        .service-link:hover {
+            background: #5a67d8;
+            text-decoration: none;
+            color: white;
+        }
+
+        .service-link.secondary {
+            background: #718096;
+        }
+
+        .service-link.secondary:hover {
+            background: #4a5568;
+        }
+
+
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+
+        .status-healthy {
+            background: #48bb78;
+        }
+
+        .status-warning {
+            background: #ed8936;
+        }
+
+        .footer {
+            text-align: center;
+            margin-top: 40px;
+            color: #7f8c8d;
+            font-size: 0.9em;
+        }
+
+        .emoji {
+            font-size: 1.5em;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>💱 Currency Conversion API</h1>
+        <p class="subtitle">Complete FastAPI-based currency conversion platform with observability and monitoring</p>
+
+        <div class="services-grid">
+            <div class="service-card">
+                <h3><span class="emoji">🚀</span> API Services</h3>
+                <p>Core FastAPI application with currency conversion, rates, and health endpoints</p>
+                <div class="service-links">
+                    <a href="/docs" class="service-link">📚 API Docs</a>
+                    <a href="/health" class="service-link secondary">❤️ Health Check</a>
+                    <a href="/metrics" class="service-link secondary">📊 Metrics</a>
+                </div>
+            </div>
+
+            <div class="service-card">
+                <h3><span class="emoji">📈</span> Dashboard</h3>
+                <p>Interactive Streamlit dashboard for currency conversion and rate visualization</p>
+                <div class="service-links">
+                    <a href="http://localhost:8501" class="service-link" target="_blank">🎯 Open Dashboard</a>
+                </div>
+            </div>
+
+            <div class="service-card">
+                <h3><span class="emoji">🔥</span> Load Tester</h3>
+                <p>Comprehensive load testing platform with scenarios, reporting, and performance analysis</p>
+                <div class="service-links">
+                    <a href="http://localhost:8001" class="service-link" target="_blank">⚡ Load Tester</a>
+                    <a href="http://localhost:8001/docs" class="service-link secondary" target="_blank">📋 API Docs</a>
+                    <a href="http://localhost:8001/api/load-test/scenarios" class="service-link secondary" target="_blank">🎯 Scenarios</a>
+                </div>
+            </div>
+
+            <div class="service-card">
+                <h3><span class="emoji">📊</span> Monitoring</h3>
+                <p>Prometheus metrics collection and Grafana visualization dashboards</p>
+                <div class="service-links">
+                    <a href="http://localhost:9090" class="service-link" target="_blank">🔍 Prometheus</a>
+                    <a href="http://localhost:3000" class="service-link" target="_blank">📉 Grafana</a>
+                </div>
+            </div>
+
+            <div class="service-card">
+                <h3><span class="emoji">🛠️</span> Development</h3>
+                <p>Development tools and testing endpoints for API exploration</p>
+                <div class="service-links">
+                    <a href="/api/v1/rates" class="service-link secondary">💰 Current Rates</a>
+                    <a href="/api/v1/rates/history?days=7" class="service-link secondary">📜 Rate History</a>
+                </div>
+            </div>
+        </div>
+
+        <div class="footer">
+            <p>🐳 Running in Docker • ✅ Phase 4 Complete • 🚀 Ready for Production</p>
+            <p>Built with FastAPI, Streamlit, Prometheus, and Grafana</p>
+        </div>
+    </div>
+</body>
+</html>

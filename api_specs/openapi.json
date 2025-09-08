@@ -1,0 +1,739 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Currency Conversion API",
+    "description": "A demo API for currency conversion with debugging capabilities",
+    "version": "0.1.0"
+  },
+  "paths": {
+    "/": {
+      "get": {
+        "summary": "Home",
+        "description": "Serve the home page with links to all services and documentation.",
+        "operationId": "home__get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "text/html": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/health": {
+      "get": {
+        "tags": [
+          "health"
+        ],
+        "summary": "Health Check",
+        "description": "Basic health check endpoint.\n\nReturns:\n    Health status and timestamp",
+        "operationId": "health_check_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "type": "object",
+                  "title": "Response Health Check Health Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/health/detailed": {
+      "get": {
+        "tags": [
+          "health"
+        ],
+        "summary": "Detailed Health Check",
+        "description": "Detailed health check including database connectivity.\n\nArgs:\n    db: Database session\n\nReturns:\n    Detailed health status",
+        "operationId": "detailed_health_check_health_detailed_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "additionalProperties": {
+                          "type": "string"
+                        },
+                        "type": "object"
+                      }
+                    ]
+                  },
+                  "type": "object",
+                  "title": "Response Detailed Health Check Health Detailed Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/convert": {
+      "post": {
+        "tags": [
+          "conversion"
+        ],
+        "summary": "Convert Currency",
+        "description": "Convert currency from one type to another.\n\nArgs:\n    conversion_request: Conversion request with amount and currencies\n    request: FastAPI request object with authentication context\n    db: Database session\n\nReturns:\n    Conversion response with results\n\nRaises:\n    HTTPException: If currency is invalid or conversion fails",
+        "operationId": "convert_currency_api_v1_convert_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConversionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConversionResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/rates": {
+      "get": {
+        "tags": [
+          "rates"
+        ],
+        "summary": "Get Current Rates",
+        "description": "Get current exchange rates for all supported currencies.\n\nReturns:\n    Current exchange rates relative to USD\n\nRaises:\n    HTTPException: If rates cannot be retrieved",
+        "operationId": "get_current_rates_api_v1_rates_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RatesResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/rates/history": {
+      "get": {
+        "tags": [
+          "rates"
+        ],
+        "summary": "Get Rates History",
+        "description": "Get historical exchange rates with optional filtering.\n\nArgs:\n    currency: Optional currency code to filter results\n    days: Number of days of history to retrieve (1-365)\n    limit: Maximum number of records to return (1-10000)\n    db: Database session\n\nReturns:\n    Historical exchange rates data\n\nRaises:\n    HTTPException: If history cannot be retrieved or parameters are invalid",
+        "operationId": "get_rates_history_api_v1_rates_history_get",
+        "parameters": [
+          {
+            "name": "currency",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter by specific currency code",
+              "title": "Currency"
+            },
+            "description": "Filter by specific currency code"
+          },
+          {
+            "name": "days",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 365,
+              "minimum": 1,
+              "description": "Number of days of history to retrieve",
+              "default": 7,
+              "title": "Days"
+            },
+            "description": "Number of days of history to retrieve"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 10000,
+              "minimum": 1,
+              "description": "Maximum number of records",
+              "default": 1000,
+              "title": "Limit"
+            },
+            "description": "Maximum number of records"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RatesHistoryResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/debug/user-activity": {
+      "get": {
+        "tags": [
+          "debug"
+        ],
+        "summary": "Get User Activity",
+        "description": "Get recent user activity for DDoS investigation.\n\nThis endpoint helps identify users with unusually high activity levels\nby analyzing conversion requests over the specified time window.\n\nArgs:\n    minutes: Number of minutes to look back (1-60)\n    limit: Maximum number of users to return (5-100)\n    db: Database session\n\nReturns:\n    Dictionary with user activity statistics",
+        "operationId": "get_user_activity_api_debug_user_activity_get",
+        "parameters": [
+          {
+            "name": "minutes",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 60,
+              "minimum": 1,
+              "description": "Minutes to look back",
+              "default": 10,
+              "title": "Minutes"
+            },
+            "description": "Minutes to look back"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 5,
+              "description": "Max users to return",
+              "default": 20,
+              "title": "Limit"
+            },
+            "description": "Max users to return"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Get User Activity Api Debug User Activity Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/debug/request-patterns": {
+      "get": {
+        "tags": [
+          "debug"
+        ],
+        "summary": "Get Request Patterns",
+        "description": "Analyze request patterns for anomaly detection.\n\nThis endpoint provides insights into request patterns that might indicate\ncoordinated attacks or unusual behavior.\n\nArgs:\n    minutes: Number of minutes to look back (1-60)\n    db: Database session\n\nReturns:\n    Dictionary with request pattern analysis",
+        "operationId": "get_request_patterns_api_debug_request_patterns_get",
+        "parameters": [
+          {
+            "name": "minutes",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 60,
+              "minimum": 1,
+              "description": "Minutes to look back",
+              "default": 10,
+              "title": "Minutes"
+            },
+            "description": "Minutes to look back"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Get Request Patterns Api Debug Request Patterns Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api": {
+      "get": {
+        "summary": "Api Info",
+        "description": "API information endpoint.\n\nReturns:\n    API information and available endpoints",
+        "operationId": "api_info_api_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "additionalProperties": {
+                          "type": "string"
+                        },
+                        "type": "object"
+                      }
+                    ]
+                  },
+                  "type": "object",
+                  "title": "Response Api Info Api Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/metrics": {
+      "get": {
+        "summary": "Metrics",
+        "description": "Prometheus metrics endpoint.\n\nReturns:\n    Prometheus metrics in text format",
+        "operationId": "metrics_metrics_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "ConversionRequest": {
+        "properties": {
+          "amount": {
+            "anyOf": [
+              {
+                "type": "number",
+                "exclusiveMinimum": 0.0
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "title": "Amount",
+            "description": "Amount to convert"
+          },
+          "from_currency": {
+            "type": "string",
+            "maxLength": 3,
+            "minLength": 3,
+            "title": "From Currency",
+            "description": "Source currency code"
+          },
+          "to_currency": {
+            "type": "string",
+            "maxLength": 3,
+            "minLength": 3,
+            "title": "To Currency",
+            "description": "Target currency code"
+          },
+          "request_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Request Id",
+            "description": "Request ID (auto-generated if not provided)"
+          }
+        },
+        "type": "object",
+        "required": [
+          "amount",
+          "from_currency",
+          "to_currency"
+        ],
+        "title": "ConversionRequest",
+        "description": "Request model for currency conversion."
+      },
+      "ConversionResponse": {
+        "properties": {
+          "conversion_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Conversion Id",
+            "description": "Unique conversion ID"
+          },
+          "request_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Request Id",
+            "description": "Request ID from input"
+          },
+          "amount": {
+            "type": "string",
+            "title": "Amount",
+            "description": "Original amount"
+          },
+          "from_currency": {
+            "type": "string",
+            "title": "From Currency",
+            "description": "Source currency code"
+          },
+          "to_currency": {
+            "type": "string",
+            "title": "To Currency",
+            "description": "Target currency code"
+          },
+          "converted_amount": {
+            "type": "string",
+            "title": "Converted Amount",
+            "description": "Converted amount"
+          },
+          "exchange_rate": {
+            "type": "string",
+            "title": "Exchange Rate",
+            "description": "Exchange rate used"
+          },
+          "rate_timestamp": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Rate Timestamp",
+            "description": "When the rate was last updated"
+          },
+          "conversion_timestamp": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Conversion Timestamp",
+            "description": "When conversion was performed"
+          },
+          "metadata": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Metadata",
+            "description": "Additional metadata about the conversion"
+          }
+        },
+        "type": "object",
+        "required": [
+          "request_id",
+          "amount",
+          "from_currency",
+          "to_currency",
+          "converted_amount",
+          "exchange_rate",
+          "rate_timestamp"
+        ],
+        "title": "ConversionResponse",
+        "description": "Response model for currency conversion."
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "HistoricalRateInfo": {
+        "properties": {
+          "currency": {
+            "type": "string",
+            "title": "Currency",
+            "description": "Currency code"
+          },
+          "rate": {
+            "type": "string",
+            "title": "Rate",
+            "description": "Exchange rate relative to base currency"
+          },
+          "recorded_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Recorded At",
+            "description": "When this rate was recorded"
+          },
+          "base_currency": {
+            "type": "string",
+            "title": "Base Currency",
+            "description": "Base currency for this rate",
+            "default": "USD"
+          },
+          "rate_source": {
+            "type": "string",
+            "title": "Rate Source",
+            "description": "Source of the rate data",
+            "default": "simulated"
+          }
+        },
+        "type": "object",
+        "required": [
+          "currency",
+          "rate",
+          "recorded_at"
+        ],
+        "title": "HistoricalRateInfo",
+        "description": "Historical exchange rate information with timestamp."
+      },
+      "RateInfo": {
+        "properties": {
+          "currency": {
+            "type": "string",
+            "title": "Currency",
+            "description": "Currency code"
+          },
+          "rate": {
+            "type": "string",
+            "title": "Rate",
+            "description": "Exchange rate relative to USD"
+          },
+          "last_updated": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Last Updated",
+            "description": "When this rate was last updated"
+          }
+        },
+        "type": "object",
+        "required": [
+          "currency",
+          "rate",
+          "last_updated"
+        ],
+        "title": "RateInfo",
+        "description": "Individual exchange rate information."
+      },
+      "RatesHistoryResponse": {
+        "properties": {
+          "currency": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Currency",
+            "description": "Specific currency (if filtered)"
+          },
+          "rates": {
+            "items": {
+              "$ref": "#/components/schemas/HistoricalRateInfo"
+            },
+            "type": "array",
+            "title": "Rates",
+            "description": "List of historical rates"
+          },
+          "period": {
+            "additionalProperties": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "type": "object",
+            "title": "Period",
+            "description": "Time period covered"
+          },
+          "total_records": {
+            "type": "integer",
+            "title": "Total Records",
+            "description": "Total number of records returned"
+          },
+          "base_currency": {
+            "type": "string",
+            "title": "Base Currency",
+            "description": "Base currency for all rates",
+            "default": "USD"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Timestamp",
+            "description": "When the history was retrieved"
+          },
+          "metadata": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Metadata",
+            "description": "Additional metadata about the historical data"
+          }
+        },
+        "type": "object",
+        "required": [
+          "rates",
+          "period",
+          "total_records"
+        ],
+        "title": "RatesHistoryResponse",
+        "description": "Response model for historical exchange rates."
+      },
+      "RatesResponse": {
+        "properties": {
+          "base_currency": {
+            "type": "string",
+            "title": "Base Currency",
+            "description": "Base currency for all rates",
+            "default": "USD"
+          },
+          "rates": {
+            "items": {
+              "$ref": "#/components/schemas/RateInfo"
+            },
+            "type": "array",
+            "title": "Rates",
+            "description": "List of exchange rates"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Timestamp",
+            "description": "When rates were retrieved"
+          },
+          "metadata": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Metadata",
+            "description": "Additional metadata about the rates"
+          }
+        },
+        "type": "object",
+        "required": [
+          "rates"
+        ],
+        "title": "RatesResponse",
+        "description": "Response model for current exchange rates."
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      }
+    }
+  }
+}

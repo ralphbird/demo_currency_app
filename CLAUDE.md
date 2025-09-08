@@ -11,8 +11,8 @@ observability, authentication, and testing. The service provides:
 - **Currency Conversion API**: FastAPI service with 10 major currencies
 - **Historical Rate Data**: 30+ days of exchange rate history
 - **JWT Authentication**: Secure API access with token validation
-- **Prometheus Metrics**: Detailed performance and business metrics
-- **OpenTelemetry Tracing**: Distributed tracing for request correlation
+- **PostgreSQL Database**: Production-ready database with Docker deployment
+- **Full Monitoring Stack**: Prometheus metrics, Grafana dashboards, Jaeger tracing
 - **Comprehensive Testing**: 228+ tests with isolated test databases
 
 ## Development Commands
@@ -28,6 +28,13 @@ poetry run uvicorn currency_app.main:app --reload # Start API server
 ### Docker Workflow
 
 ```bash
+# Full stack with monitoring (recommended)
+make up                                          # Start all services with monitoring
+make down                                        # Stop all services
+make logs                                        # View service logs
+make rebuild                                     # Rebuild and restart services
+
+# Single container (basic)
 docker build -t currency-api .                   # Build container
 docker run -p 8000:8000 currency-api            # Run container
 ```
@@ -124,12 +131,22 @@ test databases in `tests/databases/`. Integration tests override database depend
 
 ## Available Services and URLs
 
-When running locally:
+### Local Development (poetry run)
 
 - **Currency API**: <http://localhost:8000> (FastAPI with interactive docs at /docs)
 - **Health Check**: <http://localhost:8000/health> (Service health status)
 - **Metrics**: <http://localhost:8000/metrics> (Prometheus metrics)
 - **API Info**: <http://localhost:8000/api> (API information and endpoints)
+
+### Docker Deployment (make up)
+
+- **Currency API**: <http://localhost:8000> (FastAPI with interactive docs at /docs)
+- **PostgreSQL Database**: localhost:5432 (currency_user/currency_pass/currency_db)
+- **Prometheus**: <http://localhost:9090> (Metrics collection and querying)
+- **Grafana**: <http://localhost:3000> (Dashboards and alerting - admin/admin)
+- **Jaeger**: <http://localhost:16686> (Distributed tracing UI)
+- **cAdvisor**: <http://localhost:8080> (Container metrics)
+- **Loki**: <http://localhost:3100> (Log aggregation)
 
 ## Test Structure and Patterns
 
@@ -176,8 +193,8 @@ assert len(total_samples) > 0
 
 ## Configuration and Environment
 
-**Local Development**: Uses SQLite database (or PostgreSQL), default port 8000
-**Docker Deployment**: Uses environment variables, port 8000 exposed
+**Local Development**: Uses SQLite database, default port 8000, basic monitoring
+**Docker Deployment**: Full monitoring stack with PostgreSQL, comprehensive observability
 
 **Key Environment Variables**:
 
@@ -191,7 +208,7 @@ assert len(total_samples) > 0
 **Database Configuration**:
 
 - **Development**: SQLite (`sqlite:///./currency_demo.db`)
-- **Production**: PostgreSQL (`postgresql://user:pass@host:5432/dbname`)
+- **Docker**: PostgreSQL (`postgresql://currency_user:currency_pass@postgres:5432/currency_db`)
 - **Testing**: Isolated SQLite databases in `tests/databases/`
 
 ## Development Best Practices

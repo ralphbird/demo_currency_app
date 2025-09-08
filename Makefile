@@ -1,4 +1,4 @@
-.PHONY: help install dev run build docker-run test quality clean setup
+.PHONY: help install dev run build docker-run up down logs rebuild test quality clean docker-clean setup
 
 # Default target - shows available commands
 help:
@@ -9,15 +9,21 @@ help:
 	@echo "  make setup    - Complete setup (install + pre-commit + demo data)"
 	@echo "  make dev      - Start development server with auto-reload"
 	@echo "  make run      - Start production server"
-	@echo "  make build    - Build Docker container"
-	@echo "  make docker-run - Build and run Docker container"
+	@echo "  make up       - Start all services with full monitoring stack (Docker)"
+	@echo "  make down     - Stop all Docker services"
+	@echo "  make logs     - View Docker service logs"
+	@echo "  make rebuild  - Rebuild and restart all Docker services"
+	@echo "  make build    - Build Docker container only"
+	@echo "  make docker-run - Build and run single Docker container"
 	@echo "  make test     - Run test suite with coverage"
 	@echo "  make quality  - Run code quality checks (format, lint, type-check)"
 	@echo "  make clean    - Clean build artifacts and caches"
+	@echo "  make docker-clean - Clean all Docker resources"
 	@echo ""
 	@echo "🚀 Quick Start:"
 	@echo "  make setup    - Set up everything for development"
 	@echo "  make dev      - Start development server"
+	@echo "  make up       - Start with full monitoring stack (PostgreSQL + Grafana)"
 	@echo ""
 	@echo "📖 Documentation:"
 	@echo "  API Docs: http://localhost:8000/docs (when running)"
@@ -66,7 +72,7 @@ build:
 	docker build -t currency-api .
 	@echo "✅ Container built successfully!"
 
-# Build and run Docker container
+# Build and run Docker container (standalone)
 docker-run: build
 	@echo "🐳 Running Docker container..."
 	@echo "📖 API Documentation: http://localhost:8000/docs"
@@ -74,6 +80,46 @@ docker-run: build
 	@echo ""
 	@echo "Press Ctrl+C to stop the container"
 	docker run -p 8000:8000 --rm currency-api
+
+# Start all services with full monitoring stack
+up:
+	@echo "🐳 Starting Currency API with full monitoring stack..."
+	docker-compose up -d
+	@echo "✅ All services started!"
+	@echo ""
+	@echo "🚀 Available at:"
+	@echo "   💰 API: http://localhost:8000"
+	@echo "   📈 Prometheus: http://localhost:9090"
+	@echo "   📉 Grafana: http://localhost:3000 (admin/admin)"
+	@echo "   🔍 Jaeger: http://localhost:16686"
+	@echo "   🗄️  PostgreSQL: localhost:5432"
+	@echo ""
+	@echo "Type 'make down' to stop all services"
+
+# Stop all services
+down:
+	@echo "🐳 Stopping all services..."
+	docker-compose down
+	@echo "✅ All services stopped!"
+
+# View service logs
+logs:
+	@echo "📊 Viewing service logs (Ctrl+C to exit)..."
+	docker-compose logs -f
+
+# Rebuild and restart all services
+rebuild:
+	@echo "🔄 Rebuilding and restarting all services..."
+	docker-compose down
+	docker-compose build
+	docker-compose up -d
+	@echo "✅ Services rebuilt and restarted!"
+	@echo ""
+	@echo "🚀 Available at:"
+	@echo "   💰 API: http://localhost:8000"
+	@echo "   📈 Prometheus: http://localhost:9090"
+	@echo "   📉 Grafana: http://localhost:3000 (admin/admin)"
+	@echo "   🔍 Jaeger: http://localhost:16686"
 
 # Run test suite with coverage
 test:
@@ -154,6 +200,13 @@ clean:
 	find . -type d -name "htmlcov" -exec rm -rf {} + 2>/dev/null || true
 	rm -rf dist/ build/ .ruff_cache/
 	@echo "✅ Cleanup completed!"
+
+# Clean all Docker resources
+docker-clean:
+	@echo "🧹 Cleaning all Docker resources..."
+	docker-compose down -v --rmi local --remove-orphans
+	docker system prune -f
+	@echo "✅ Docker cleanup completed!"
 
 # Check service health
 health:

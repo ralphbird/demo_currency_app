@@ -46,7 +46,7 @@ def configure_structlog(service_name: str) -> None:
     """Configure structlog for a specific service.
 
     Args:
-        service_name: Name of the service (e.g., 'currency-api', 'load-tester')
+        service_name: Name of the service (e.g., 'currency-api')
     """
     # Configure processors that transform log entries
     processors = [

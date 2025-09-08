@@ -1,0 +1,25 @@
+apiVersion: 1
+
+# PagerDuty contact points for Grafana unified alerting
+contactPoints:
+  - orgId: 1
+    name: pagerduty-critical
+    receivers:
+      - uid: pagerduty-critical-uid
+        type: pagerduty
+        settings:
+          integrationKey: "${PAGERDUTY_CURRENCY_APP_KEY}"
+          severity: critical
+          component: currency-api
+          group: currency-conversion-system
+
+  - orgId: 1
+    name: pagerduty-warning
+    receivers:
+      - uid: pagerduty-warning-uid
+        type: pagerduty
+        settings:
+          integrationKey: "${PAGERDUTY_CURRENCY_APP_KEY}"
+          severity: warning
+          component: currency-api
+          group: currency-conversion-system

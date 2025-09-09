@@ -1,4 +1,4 @@
-.PHONY: help install dev run build docker-run up down logs rebuild test quality clean docker-clean setup
+.PHONY: help install setup dev run build up down logs rebuild test quality clean docker-clean
 
 # Default target - shows available commands
 help:
@@ -13,8 +13,7 @@ help:
 	@echo "  make down     - Stop all Docker services"
 	@echo "  make logs     - View Docker service logs"
 	@echo "  make rebuild  - Rebuild and restart all Docker services"
-	@echo "  make build    - Build Docker container only"
-	@echo "  make docker-run - Build and run single Docker container"
+	@echo "  make build    - Build Docker containers only"
 	@echo "  make test     - Run test suite with coverage"
 	@echo "  make quality  - Run code quality checks (format, lint, type-check)"
 	@echo "  make clean    - Clean build artifacts and caches"
@@ -66,20 +65,11 @@ run:
 	@echo "🚀 Starting production server..."
 	poetry run uvicorn currency_app.main:app --host 0.0.0.0 --port 8000
 
-# Build Docker container
+# Build Docker containers
 build:
-	@echo "🐳 Building Docker container..."
-	docker build -t currency-api .
-	@echo "✅ Container built successfully!"
-
-# Build and run Docker container (standalone)
-docker-run: build
-	@echo "🐳 Running Docker container..."
-	@echo "📖 API Documentation: http://localhost:8000/docs"
-	@echo "🔍 Health Check: http://localhost:8000/health"
-	@echo ""
-	@echo "Press Ctrl+C to stop the container"
-	docker run -p 8000:8000 --rm currency-api
+	@echo "🐳 Building Docker containers..."
+	docker-compose build
+	@echo "✅ Containers built successfully!"
 
 # Start all services with full monitoring stack
 up:
@@ -133,17 +123,6 @@ test-fast:
 	poetry run pytest tests/ -v
 	@echo "✅ Tests completed!"
 
-# Run specific test file
-test-file:
-	@echo "🧪 Running specific test file..."
-	@echo "Usage: make test-file FILE=tests/test_api.py"
-	@if [ -z "$(FILE)" ]; then \
-		echo "❌ Error: Please specify FILE parameter"; \
-		echo "   Example: make test-file FILE=tests/test_api.py"; \
-		exit 1; \
-	fi
-	poetry run pytest $(FILE) -v
-
 # Run code quality checks
 quality:
 	@echo "🔍 Running code quality checks..."
@@ -153,8 +132,6 @@ quality:
 	poetry run ruff check --fix currency_app/ common/ tests/
 	@echo "📋 Type checking..."
 	poetry run pyright currency_app/ common/ tests/
-	@echo "📄 Generating OpenAPI specification..."
-	poetry run python scripts/generate_openapi_spec.py
 	@echo "✅ Quality checks completed!"
 
 # Format code only
@@ -174,19 +151,6 @@ typecheck:
 	@echo "📋 Type checking..."
 	poetry run pyright currency_app/ common/ tests/
 	@echo "✅ Type checking completed!"
-
-# Generate demo data
-demo-data:
-	@echo "📊 Generating demo data..."
-	poetry run python scripts/generate_demo_data.py
-	@echo "✅ Demo data generated!"
-
-
-# Generate OpenAPI specification
-openapi:
-	@echo "📄 Generating OpenAPI specification..."
-	poetry run python scripts/generate_openapi_spec.py
-	@echo "✅ OpenAPI specification generated!"
 
 # Clean build artifacts and caches
 clean:

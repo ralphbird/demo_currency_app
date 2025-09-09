@@ -135,7 +135,7 @@
 <body>
     <div class="container">
         <h1>💱 Currency Conversion API</h1>
-        <p class="subtitle">Complete FastAPI-based currency conversion platform with observability and monitoring</p>
+        <p class="subtitle">Standalone FastAPI-based currency conversion service with comprehensive monitoring</p>
 
         <div class="services-grid">
             <div class="service-card">
@@ -149,36 +149,37 @@
             </div>
 
             <div class="service-card">
-                <h3><span class="emoji">📈</span> Dashboard</h3>
-                <p>Interactive Streamlit dashboard for currency conversion and rate visualization</p>
-                <div class="service-links">
-                    <a href="http://localhost:8501" class="service-link" target="_blank">🎯 Open Dashboard</a>
-                </div>
-            </div>
-
-
-            <div class="service-card">
                 <h3><span class="emoji">📊</span> Monitoring</h3>
-                <p>Prometheus metrics collection and Grafana visualization dashboards</p>
+                <p>Prometheus metrics collection and Grafana dashboards (available when running with Docker)</p>
                 <div class="service-links">
                     <a href="http://localhost:9090" class="service-link" target="_blank">🔍 Prometheus</a>
                     <a href="http://localhost:3000" class="service-link" target="_blank">📉 Grafana</a>
+                    <a href="http://localhost:16686" class="service-link" target="_blank">🔍 Jaeger</a>
                 </div>
             </div>
 
             <div class="service-card">
-                <h3><span class="emoji">🛠️</span> Development</h3>
-                <p>Development tools and testing endpoints for API exploration</p>
+                <h3><span class="emoji">🗄️</span> Database</h3>
+                <p>PostgreSQL database with historical rates and conversion records (Docker mode)</p>
+                <div class="service-links">
+                    <a href="#" class="service-link secondary" onclick="alert('PostgreSQL: localhost:5432\\nDatabase: currency_db\\nUser: currency_user')">🐘 Connection Info</a>
+                </div>
+            </div>
+
+            <div class="service-card">
+                <h3><span class="emoji">🛠️</span> Currency Data</h3>
+                <p>Live currency rates and historical data endpoints for development and testing</p>
                 <div class="service-links">
                     <a href="/api/v1/rates" class="service-link secondary">💰 Current Rates</a>
                     <a href="/api/v1/rates/history?days=7" class="service-link secondary">📜 Rate History</a>
+                    <a href="/api" class="service-link secondary">🔗 API Info</a>
                 </div>
             </div>
         </div>
 
         <div class="footer">
-            <p>🐳 Running in Docker • ✅ Phase 4 Complete • 🚀 Ready for Production</p>
-            <p>Built with FastAPI, Streamlit, Prometheus, and Grafana</p>
+            <p>💰 Standalone Currency Service • ✅ Production Ready • 📊 Full Monitoring Stack Available</p>
+            <p>Built with FastAPI, PostgreSQL, Prometheus, and Grafana</p>
         </div>
     </div>
 </body>

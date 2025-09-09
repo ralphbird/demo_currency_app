@@ -61,6 +61,7 @@ groups:
           description: "The Currency API service is not responding"
           summary: "Currency API is down"
           severity: "critical"
+          runbook_url: "https://github.com/ralphbird/demo_currency_app/blob/main/docs/runbook.md#currency-api-service-down"
         labels:
           severity: critical
         notification_settings:
@@ -121,6 +122,7 @@ groups:
           description: "Currency API error rate is above 5% threshold"
           summary: "High error rate detected in Currency API"
           severity: "critical"
+          runbook_url: "https://github.com/ralphbird/demo_currency_app/blob/main/docs/runbook.md#currency-api-high-error-rate"
         labels:
           severity: critical
         notification_settings:
@@ -181,6 +183,7 @@ groups:
           description: "Currency API is receiving elevated request volume (>20 RPS for 2 minutes)"
           summary: "Elevated request rate in Currency API"
           severity: "warning"
+          runbook_url: "https://github.com/ralphbird/demo_currency_app/blob/main/docs/runbook.md#currency-api-high-request-rate"
         labels:
           severity: warning
         notification_settings:
@@ -242,6 +245,7 @@ groups:
           description: "Currency API CPU usage is above 80% for 3 minutes"
           summary: "High CPU usage in Currency API"
           severity: "warning"
+          runbook_url: "https://github.com/ralphbird/demo_currency_app/blob/main/docs/runbook.md#currency-api-high-cpu-usage"
         labels:
           severity: warning
         notification_settings:
@@ -303,6 +307,7 @@ groups:
           description: "Currency API memory usage is above 1GB for 5 minutes"
           summary: "High memory usage in Currency API"
           severity: "warning"
+          runbook_url: "https://github.com/ralphbird/demo_currency_app/blob/main/docs/runbook.md#currency-api-high-memory-usage"
         labels:
           severity: warning
         notification_settings:
@@ -364,6 +369,7 @@ groups:
           description: "Currency API is using over 80% of available file descriptors"
           summary: "High file descriptor usage in Currency API"
           severity: "warning"
+          runbook_url: "https://github.com/ralphbird/demo_currency_app/blob/main/docs/runbook.md#currency-api-high-file-descriptor-usage"
         labels:
           severity: warning
         notification_settings:
@@ -424,6 +430,7 @@ groups:
           description: "Currency API 95th percentile response time is above 1 second (potential attack impact)"
           summary: "High response time in Currency API"
           severity: "warning"
+          runbook_url: "https://github.com/ralphbird/demo_currency_app/blob/main/docs/runbook.md#currency-api-high-response-time-p95"
         labels:
           severity: warning
         notification_settings:
@@ -484,6 +491,7 @@ groups:
           description: "Currency API average response time is above 500ms (indicating system stress)"
           summary: "Performance degradation in Currency API"
           severity: "warning"
+          runbook_url: "https://github.com/ralphbird/demo_currency_app/blob/main/docs/runbook.md#currency-api-average-response-time-high"
         labels:
           severity: warning
         notification_settings:

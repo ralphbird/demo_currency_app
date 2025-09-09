@@ -87,7 +87,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "rate(http_requests_total[10s])",
+          "expr": "rate(http_requests_total{endpoint=~\"$endpoint\"}[10s])",
           "legendFormat": "{{method}} {{endpoint}}",
           "range": true,
           "refId": "A"
@@ -175,8 +175,8 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[10s]))",
-          "legendFormat": "95th percentile",
+          "expr": "histogram_quantile(0.95, sum by (le, endpoint) (rate(http_request_duration_seconds_bucket{endpoint=~\"$endpoint\"}[10s])))",
+          "legendFormat": "{{endpoint}} - 95th percentile",
           "range": true,
           "refId": "A"
         },
@@ -185,8 +185,8 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "histogram_quantile(0.50, rate(http_request_duration_seconds_bucket[10s]))",
-          "legendFormat": "50th percentile (median)",
+          "expr": "histogram_quantile(0.50, sum by (le, endpoint) (rate(http_request_duration_seconds_bucket{endpoint=~\"$endpoint\"}[10s])))",
+          "legendFormat": "{{endpoint}} - 50th percentile (median)",
           "range": true,
           "refId": "B"
         }
@@ -253,7 +253,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "sum(http_requests_total)",
+          "expr": "sum(http_requests_total{endpoint=~\"$endpoint\"})",
           "legendFormat": "Total Requests",
           "range": true,
           "refId": "A"
@@ -387,8 +387,8 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "rate(http_requests_total{status_code=~\"2[0-9][0-9]\"}[10s])",
-          "legendFormat": "2xx Success",
+          "expr": "sum by (endpoint) (rate(http_requests_total{status_code=~\"2[0-9][0-9]\", endpoint=~\"$endpoint\"}[10s]))",
+          "legendFormat": "{{endpoint}} - 2xx Success",
           "range": true,
           "refId": "A"
         },
@@ -397,8 +397,8 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "rate(http_requests_total{status_code=~\"4[0-9][0-9]\"}[10s])",
-          "legendFormat": "4xx Client Error",
+          "expr": "sum by (endpoint) (rate(http_requests_total{status_code=~\"4[0-9][0-9]\", endpoint=~\"$endpoint\"}[10s]))",
+          "legendFormat": "{{endpoint}} - 4xx Client Error",
           "range": true,
           "refId": "B"
         },
@@ -407,8 +407,8 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "rate(http_requests_total{status_code=~\"5[0-9][0-9]\"}[10s])",
-          "legendFormat": "5xx Server Error",
+          "expr": "sum by (endpoint) (rate(http_requests_total{status_code=~\"5[0-9][0-9]\", endpoint=~\"$endpoint\"}[10s]))",
+          "legendFormat": "{{endpoint}} - 5xx Server Error",
           "range": true,
           "refId": "C"
         }
@@ -475,8 +475,8 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "http_requests_in_progress",
-          "legendFormat": "Active Requests",
+          "expr": "sum by (endpoint) (http_requests_in_progress{endpoint=~\"$endpoint\"})",
+          "legendFormat": "{{endpoint}} - Active Requests",
           "range": true,
           "refId": "A"
         }
@@ -679,7 +679,35 @@
     "performance"
   ],
   "templating": {
-    "list": []
+    "list": [
+      {
+        "current": {
+          "selected": false,
+          "text": "All",
+          "value": "$__all"
+        },
+        "datasource": {
+          "type": "prometheus",
+          "uid": "prometheus"
+        },
+        "definition": "label_values(http_requests_total, endpoint)",
+        "hide": 0,
+        "includeAll": true,
+        "label": "Endpoint",
+        "multi": true,
+        "name": "endpoint",
+        "options": [],
+        "query": {
+          "query": "label_values(http_requests_total, endpoint)",
+          "refId": "StandardVariableQuery"
+        },
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 1,
+        "type": "query"
+      }
+    ]
   },
   "time": {
     "from": "now-1h",

@@ -229,7 +229,8 @@
             "uid": "loki"
           },
           "editorMode": "builder",
-          "expr": "sum by (service) (count_over_time({job=~\"currency-api\"} | json | __error__=\"\" | level=\"ERROR\" [1m]))",
+          "expr": "sum(count_over_time({job=~\"currency-api\"} | json | __error__=\"\" | level=\"ERROR\" [1m]))",
+          "legendFormat": "Currency API - Errors",
           "queryType": "",
           "refId": "A"
         },
@@ -239,7 +240,8 @@
             "uid": "loki"
           },
           "editorMode": "builder",
-          "expr": "sum by (service) (count_over_time({job=~\"currency-api\"} | json | __error__=\"\" | level=\"WARNING\" [1m]))",
+          "expr": "sum(count_over_time({job=~\"currency-api\"} | json | __error__=\"\" | level=\"WARNING\" [1m]))",
+          "legendFormat": "Currency API - Warnings",
           "queryType": "",
           "refId": "B"
         }
@@ -316,7 +318,7 @@
           "calcs": [],
           "displayMode": "list",
           "placement": "bottom",
-          "showLegend": true
+          "showLegend": false
         },
         "tooltip": {
           "mode": "single",
@@ -330,12 +332,13 @@
             "uid": "loki"
           },
           "editorMode": "builder",
-          "expr": "sum by (service) (count_over_time({job=~\"currency-api\"} | json | __error__=\"\" [1m]))",
+          "expr": "sum(count_over_time({job=~\"currency-api\"} | json | __error__=\"\" [1m]))",
+          "legendFormat": "Currency API",
           "queryType": "",
           "refId": "A"
         }
       ],
-      "title": "Log Volume by Service",
+      "title": "Log Volume",
       "type": "timeseries"
     },
     {

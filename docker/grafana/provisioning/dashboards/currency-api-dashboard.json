@@ -87,7 +87,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "rate(http_requests_total{endpoint=~\"$endpoint\"}[10s])",
+          "expr": "sum by (method, endpoint) (rate(http_requests_total{endpoint=~\"$endpoint\"}[10s]))",
           "legendFormat": "{{method}} {{endpoint}}",
           "range": true,
           "refId": "A"
@@ -193,74 +193,6 @@
       ],
       "title": "Response Time",
       "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "yellow",
-                "value": 1000
-              },
-              {
-                "color": "red",
-                "value": 5000
-              }
-            ]
-          },
-          "unit": "short"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 6,
-        "w": 6,
-        "x": 0,
-        "y": 8
-      },
-      "id": 3,
-      "options": {
-        "colorMode": "value",
-        "graphMode": "area",
-        "justifyMode": "auto",
-        "orientation": "auto",
-        "reduceOptions": {
-          "values": false,
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": ""
-        },
-        "textMode": "auto"
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "expr": "sum(http_requests_total{endpoint=~\"$endpoint\"})",
-          "legendFormat": "Total Requests",
-          "range": true,
-          "refId": "A"
-        }
-      ],
-      "title": "Total Requests",
-      "type": "stat"
     },
     {
       "datasource": {
@@ -415,74 +347,6 @@
       ],
       "title": "Status Code Rate",
       "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "mappings": [],
-          "max": 10,
-          "min": 0,
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "yellow",
-                "value": 5
-              },
-              {
-                "color": "red",
-                "value": 8
-              }
-            ]
-          },
-          "unit": "short"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 6,
-        "w": 6,
-        "x": 18,
-        "y": 8
-      },
-      "id": 5,
-      "options": {
-        "orientation": "auto",
-        "reduceOptions": {
-          "values": false,
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": ""
-        },
-        "showThresholdLabels": false,
-        "showThresholdMarkers": true
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "expr": "sum by (endpoint) (http_requests_in_progress{endpoint=~\"$endpoint\"})",
-          "legendFormat": "{{endpoint}} - Active Requests",
-          "range": true,
-          "refId": "A"
-        }
-      ],
-      "title": "Active Requests",
-      "type": "gauge"
     },
     {
       "datasource": {
@@ -690,7 +554,7 @@
           "type": "prometheus",
           "uid": "prometheus"
         },
-        "definition": "label_values(http_requests_total, endpoint)",
+        "definition": "label_values({__name__=~\"http_requests_total\"}, endpoint)",
         "hide": 0,
         "includeAll": true,
         "label": "Endpoint",
@@ -698,7 +562,7 @@
         "name": "endpoint",
         "options": [],
         "query": {
-          "query": "label_values(http_requests_total, endpoint)",
+          "query": "label_values({__name__=~\"http_requests_total\"}, endpoint)",
           "refId": "StandardVariableQuery"
         },
         "refresh": 1,

@@ -42,6 +42,7 @@ class LoggingMiddleware(BaseHTTPMiddleware):
             endpoint=url,
             client_ip=client_ip,
             user_agent=user_agent,
+            service="currency-api",
         )
 
         # Start timer

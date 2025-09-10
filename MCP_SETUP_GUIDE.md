@@ -6,9 +6,12 @@ Grafana, GitHub, and PagerDuty integrations.
 ## 🚀 Quick Start (5 Minutes)
 
 1. **Enable MCP**: VSCode Settings → Search "copilot mcp" → Check "Enable MCP"
-2. **Install tools**: `pip install uv` and `docker pull mcp/grafana`
+2. **Install tools**:
+   - Pull Docker image for Grafana: `docker pull mcp/grafana`
+   - Install uvx for PagerDuty: `pip install uvx`
 3. **Start services**: `make up` (starts your local Grafana)
-4. **Get tokens**: Create service account token in Grafana + PagerDuty User API token
+4. **Get tokens**: Create GitHub Personal Access Token + Grafana service account token +
+   PagerDuty User API token
 5. **Restart VSCode**: Enter tokens when prompted
 
 **That's it!** Skip to [Testing Your Setup](#testing-your-setup) to verify everything works.
@@ -19,7 +22,7 @@ Grafana, GitHub, and PagerDuty integrations.
 
 - [ ] VSCode 1.101+ with GitHub Copilot extension
 - [ ] Enable MCP in VSCode settings
-- [ ] Install required tools (uv, Docker)
+- [ ] Install required tools (Docker)
 - [ ] Configure authentication for each service
 - [ ] Test server connections
 
@@ -28,13 +31,8 @@ Grafana, GitHub, and PagerDuty integrations.
 ### Required Software
 
 1. **VSCode 1.101 or later** with GitHub Copilot extension installed
-2. **Python 3.8+** with `uv` installed globally:
-
-   ```bash
-   pip install uv
-   ```
-
-3. **Optional**: Docker (for local GitHub MCP server)
+2. **Docker**: Required for Grafana MCP server
+3. **Python 3.8+** with **uvx** (or pipx): Required for PagerDuty MCP server
 
 ### Enable MCP in VSCode
 
@@ -46,11 +44,13 @@ Grafana, GitHub, and PagerDuty integrations.
 
 The configuration is already set up in `.vscode/mcp.json`. Here's what each server provides:
 
-### 1. GitHub MCP Server
+### 1. GitHub MCP Server (Remote HTTP)
 
-- **Status**: ✅ Ready to use (remote hosted)
+- **Status**: ⏳ Requires authentication setup
+- **Type**: Remote HTTP MCP server hosted by GitHub
+- **URL**: <https://api.githubcopilot.com/mcp/>
 - **Capabilities**: Repository management, GitHub Actions, code security, issues/PRs
-- **Authentication**: Uses your existing GitHub Copilot authentication
+- **Authentication**: GitHub Personal Access Token required
 
 ### 2. Grafana MCP Server
 
@@ -59,13 +59,36 @@ The configuration is already set up in `.vscode/mcp.json`. Here's what each serv
 - **URL**: Pre-configured for local Docker instance (<http://localhost:3000>)
 - **Authentication**: Service Account Token required
 
-### 3. PagerDuty MCP Server
+### 3. PagerDuty MCP Server (Local)
 
 - **Status**: ⏳ Requires authentication setup
+- **Type**: Local MCP server using uvx/pipx
+- **Command**: `uvx pagerduty-mcp --enable-write-tools`
 - **Capabilities**: Incident management, on-call schedules, escalation policies
 - **Authentication**: User API Token required
 
 ## Authentication Setup
+
+### GitHub Authentication
+
+#### Step 1: Create GitHub Personal Access Token
+
+1. Go to GitHub → **Settings** → **Developer settings** → **Personal access tokens** → **Tokens (classic)**
+2. Click **"Generate new token (classic)"**
+3. Enter description: `VSCode MCP Integration`
+4. Select scopes:
+   - `repo` (Full control of private repositories)
+   - `read:org` (Read org and team membership)
+   - `read:user` (Read user profile data)
+   - `workflow` (Update GitHub Action workflows)
+5. Click **"Generate token"**
+6. **Copy and save the token securely** (you won't see it again)
+
+#### Step 2: Test Remote GitHub MCP Connection
+
+The GitHub MCP server is hosted remotely by GitHub at `https://api.githubcopilot.com/mcp/`.
+No local installation is required - VSCode will connect directly to the remote server using your
+Personal Access Token.
 
 ### Grafana Authentication
 
@@ -125,17 +148,7 @@ docker run --rm -i --network=host \
 
 ### PagerDuty Authentication
 
-#### Step 1: Verify uv Installation
-
-```bash
-# Check if uv is installed
-uv --version
-
-# If not installed:
-pip install uv
-```
-
-#### Step 2: Create PagerDuty API Token
+#### Step 1: Create PagerDuty API Token
 
 1. Log into your PagerDuty account
 2. Go to **User Settings** (click your profile picture → **My Profile**)
@@ -144,15 +157,22 @@ pip install uv
 5. Enter description: `VSCode MCP Integration`
 6. **Copy and save the token securely**
 
-#### Step 3: Test PagerDuty Connection
+#### Step 2: Install and Test Local PagerDuty MCP Server
+
+The PagerDuty MCP server runs locally using uvx (or pipx). First, ensure you have uvx installed:
 
 ```bash
-# Test the pagerduty-mcp-server package
-uvx pagerduty-mcp-server --help
+# Install uvx if not already installed
+pip install uvx
 
-# Test connection (replace with your token)
-PAGERDUTY_API_KEY="your-token" uvx pagerduty-mcp-server --enable-write-tools
+# Test the PagerDuty MCP server installation
+uvx pagerduty-mcp --help
+
+# Test with your API key (replace with your actual token)
+PAGERDUTY_USER_API_KEY="your-token" uvx pagerduty-mcp --enable-write-tools
 ```
+
+**Note:** The server will be automatically started by VSCode when needed using the configuration in `.vscode/mcp.json`.
 
 ## Activating the Servers
 
@@ -210,20 +230,20 @@ Who is currently on call?
 #### "Server failed to start"
 
 1. Check the **Output** panel (View → Output → MCP)
-2. Verify the binary is installed and in PATH:
+2. Verify Docker images are available for local services:
 
    ```bash
-   which mcp-grafana
-   which uvx
+   docker images mcp/grafana
    ```
 
-3. Test commands manually in terminal
+3. Test remote server connectivity and authentication
 
 #### "Authentication failed"
 
-1. **Grafana**: Verify service account token has correct permissions
-2. **PagerDuty**: Verify API token is a User API Token (not Integration Key)
-3. Re-enter credentials in VSCode input prompts
+1. **GitHub**: Verify Personal Access Token has correct scopes and is not expired
+2. **Grafana**: Verify service account token has correct permissions
+3. **PagerDuty**: Verify API token is a User API Token (not Integration Key)
+4. Re-enter credentials in VSCode input prompts
 
 #### "Docker image not found"
 
@@ -235,15 +255,22 @@ docker pull mcp/grafana
 docker images mcp/grafana
 ```
 
-#### "uvx command not found"
+#### "Remote MCP connection failed"
 
-```bash
-# Install uv if missing
-pip install uv
+For GitHub remote MCP server connection issues:
 
-# Ensure PATH includes uv binaries
-export PATH="$HOME/.local/bin:$PATH"
-```
+1. **GitHub**: Check connectivity to <https://api.githubcopilot.com/mcp/> and verify token permissions
+2. Verify internet connectivity and firewall settings
+3. Review VSCode Output panel for detailed error messages
+
+#### "Local MCP server failed"
+
+For PagerDuty local MCP server issues:
+
+1. **uvx/pipx**: Verify uvx is installed: `pip install uvx`
+2. **PagerDuty package**: Test installation: `uvx pagerduty-mcp --help`
+3. **API token**: Verify token has correct permissions in PagerDuty
+4. **Python environment**: Check Python version compatibility (3.8+)
 
 ### Debug Steps
 
@@ -258,8 +285,12 @@ export PATH="$HOME/.local/bin:$PATH"
      -e GRAFANA_SERVICE_ACCOUNT_TOKEN="your-token" \
      mcp/grafana --help
 
-   # Test PagerDuty MCP
-   PAGERDUTY_API_KEY="your-token" uvx pagerduty-mcp-server --help
+   # Test PagerDuty MCP (Local uvx)
+   PAGERDUTY_USER_API_KEY="your-token" uvx pagerduty-mcp --enable-write-tools
+
+   # Test remote MCP connections (GitHub)
+   # GitHub connection is handled automatically by VSCode using remote HTTP server
+   # Check VSCode Output panel for connection status
    ```
 
 ### Re-entering Credentials
@@ -338,13 +369,14 @@ If you prefer running GitHub MCP locally:
 
 ## Available Tools by Server
 
-### GitHub MCP Server
+### GitHub MCP Server (Remote HTTP)
 
 - Repository information and statistics
 - Issue and pull request management
 - GitHub Actions workflow data
 - Code security scanning results
 - Branch and commit information
+- **Note**: Hosted remotely by GitHub at <https://api.githubcopilot.com/mcp/>
 
 ### Grafana MCP Server
 
@@ -354,13 +386,14 @@ If you prefer running GitHub MCP locally:
 - Data source queries
 - Annotation management
 
-### PagerDuty MCP Server
+### PagerDuty MCP Server (Local)
 
 - Incident creation and management
 - On-call schedule queries
 - Service and escalation policy information
 - Integration management
 - Analytics and reporting data
+- **Note**: Runs locally using `uvx pagerduty-mcp --enable-write-tools`
 
 ## Next Steps
 

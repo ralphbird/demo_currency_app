@@ -4,7 +4,7 @@ groups:
   - name: currency-api-alerts
     org_id: 1
     folder: Currency API Alerts
-    interval: 30s
+    interval: 10s
     rules:
       # Critical: API Service Down
       - uid: currency-api-down
@@ -177,10 +177,10 @@ groups:
               type: threshold
         noDataState: NoData
         execErrState: Error
-        for: 2m
+        for: 1m
         keep_firing_for: 30s
         annotations:
-          description: "Currency API is receiving elevated request volume (>100 RPS for 2 minutes)"
+          description: "Currency API is receiving elevated request volume (>100 RPS for 1 minute)"
           summary: "Elevated request rate in Currency API"
           severity: "warning"
           runbook_url: "https://github.com/ralphbird/demo_currency_app/blob/main/docs/runbook.md#currency-api-high-request-rate"

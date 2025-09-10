@@ -22,6 +22,10 @@ class InvalidCurrencyError(Exception):
     """Raised when an invalid currency code is provided."""
 
 
+class ConversionOverflowError(Exception):
+    """Raised when conversion result would exceed database limits."""
+
+
 class CurrencyService:
     """Service for currency conversion with simulated exchange rates."""
 
@@ -205,6 +209,13 @@ class CurrencyService:
                     Decimal("0.01"), rounding=ROUND_HALF_EVEN
                 )
 
+                # Validate that the result fits in database constraints
+                max_db_value = Decimal("99999999999999.99")  # Numeric(20,2) max value
+                if converted_amount > max_db_value:
+                    raise ConversionOverflowError(
+                        f"Conversion result {converted_amount} exceeds maximum supported value {max_db_value}"
+                    )
+
                 # Set result attributes
                 span.set_attribute("conversion.result.exchange_rate", float(exchange_rate))
                 span.set_attribute("conversion.result.converted_amount", float(converted_amount))
@@ -234,6 +245,17 @@ class CurrencyService:
                 )
 
                 conversion_logger.warning(f"Currency conversion failed - invalid currency: {e!s}")
+                raise
+            except ConversionOverflowError as e:
+                span.set_attribute("conversion.status", "error")
+                span.set_attribute("conversion.error.type", "overflow")
+                span.set_attribute("conversion.error.message", str(e))
+
+                add_span_event(
+                    "conversion_failed", {"error_type": "overflow", "error_message": str(e)}
+                )
+
+                conversion_logger.error(f"Currency conversion failed - amount too large: {e!s}")
                 raise
             except Exception as e:
                 span.set_attribute("conversion.status", "error")

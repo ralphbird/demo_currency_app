@@ -11,7 +11,12 @@ from pydantic import BaseModel, Field, field_validator
 class ConversionRequest(BaseModel):
     """Request model for currency conversion."""
 
-    amount: Decimal = Field(..., gt=0, description="Amount to convert")
+    amount: Decimal = Field(
+        ...,
+        gt=0,
+        le=Decimal("99999999999999.99"),
+        description="Amount to convert (max 99.99 trillion)",
+    )
     from_currency: str = Field(..., min_length=3, max_length=3, description="Source currency code")
     to_currency: str = Field(..., min_length=3, max_length=3, description="Target currency code")
     request_id: UUID = Field(

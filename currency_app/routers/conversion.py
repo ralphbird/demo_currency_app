@@ -8,7 +8,11 @@ from currency_app.middleware.auth import get_user_context
 from currency_app.middleware.metrics import record_currency_conversion, record_database_operation
 from currency_app.models.conversion import ConversionRequest, ConversionResponse, ErrorResponse
 from currency_app.models.database import ConversionHistory
-from currency_app.services.currency_service import CurrencyService, InvalidCurrencyError
+from currency_app.services.currency_service import (
+    ConversionOverflowError,
+    CurrencyService,
+    InvalidCurrencyError,
+)
 
 router = APIRouter(prefix="/api/v1", tags=["conversion"])
 
@@ -81,6 +85,25 @@ async def convert_currency(
             message=str(e),
             details={
                 "supported_currencies": ", ".join(currency_service.get_supported_currencies())
+            },
+            request_id=conversion_request.request_id,
+        )
+        raise HTTPException(status_code=400, detail=error_response.error)
+
+    except ConversionOverflowError as e:
+        # Record failed conversion metrics
+        record_currency_conversion(
+            from_currency=conversion_request.from_currency,
+            to_currency=conversion_request.to_currency,
+            success=False,
+        )
+
+        error_response = ErrorResponse.create(
+            code="AMOUNT_TOO_LARGE",
+            message=str(e),
+            details={
+                "max_supported_amount": "99,999,999,999,999.99",
+                "suggestion": "Please reduce the amount and try again",
             },
             request_id=conversion_request.request_id,
         )

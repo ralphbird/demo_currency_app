@@ -404,6 +404,7 @@
             "anyOf": [
               {
                 "type": "number",
+                "maximum": 99999999999999.98,
                 "exclusiveMinimum": 0.0
               },
               {
@@ -411,7 +412,7 @@
               }
             ],
             "title": "Amount",
-            "description": "Amount to convert"
+            "description": "Amount to convert (max 99.99 trillion)"
           },
           "from_currency": {
             "type": "string",

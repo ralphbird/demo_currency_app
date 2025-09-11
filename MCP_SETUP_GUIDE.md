@@ -39,7 +39,7 @@ Grafana, GitHub, and PagerDuty integrations. Supports both **VSCode GitHub Copil
 
 1. **VSCode 1.101 or later** with GitHub Copilot extension installed
 2. **Docker**: Required for Grafana MCP server
-3. **Python 3.8+** with **uvx** (or pipx): Required for PagerDuty MCP server
+3. **Python 3.8+** with **uv**: Required for PagerDuty MCP server (with local server directory)
 
 ### Enable MCP in VSCode
 
@@ -63,14 +63,14 @@ The configuration is already set up in `.vscode/mcp.json`. Here's what each serv
 
 - **Status**: ⏳ Requires Docker services running + authentication setup
 - **Capabilities**: Dashboard management, metrics queries, alert rules
-- **URL**: Pre-configured for local Docker instance (<http://localhost:3000>)
+- **URL**: Pre-configured for Docker service (<http://currency-grafana:3000>)
 - **Authentication**: Service Account Token required
 
 ### 3. PagerDuty MCP Server (Local)
 
 - **Status**: ⏳ Requires authentication setup
-- **Type**: Local MCP server using uvx/pipx
-- **Command**: `uvx pagerduty-mcp --enable-write-tools`
+- **Type**: Local MCP server using uv
+- **Command**: `uv run --directory ${PAGERDUTY_MCP_SERVER_DIR} python -m pagerduty_mcp --enable-write-tools`
 - **Capabilities**: Incident management, on-call schedules, escalation policies
 - **Authentication**: User API Token required
 
@@ -114,7 +114,8 @@ docker-compose up -d
 curl http://localhost:3000/api/health
 ```
 
-Your Grafana instance should be accessible at <http://localhost:3000> with default credentials `admin/admin`.
+Your Grafana instance should be accessible at <http://localhost:3000> (external) with default
+credentials `admin/admin`. The MCP server connects internally via <http://currency-grafana:3000>.
 
 #### Step 2: Pull Grafana MCP Server Docker Image
 
@@ -147,8 +148,8 @@ No binary installation required!
 docker images mcp/grafana
 
 # Test connection (replace with your token)
-docker run --rm -i --network=host \
-  -e GRAFANA_URL="http://localhost:3000" \
+docker run --rm -i --network=demo_currency_app_currency-network \
+  -e GRAFANA_URL="http://currency-grafana:3000" \
   -e GRAFANA_SERVICE_ACCOUNT_TOKEN="your-token" \
   mcp/grafana -t stdio
 ```
@@ -166,17 +167,18 @@ docker run --rm -i --network=host \
 
 #### Step 2: Install and Test Local PagerDuty MCP Server
 
-The PagerDuty MCP server runs locally using uvx (or pipx). First, ensure you have uvx installed:
+The PagerDuty MCP server runs locally using uv from a local directory. Ensure the local
+PagerDuty MCP server is available:
 
 ```bash
-# Install uvx if not already installed
-pip install uvx
+# Install uv if not already installed (or ensure local PagerDuty MCP server is available)
+# pip install uv
 
 # Test the PagerDuty MCP server installation
-uvx pagerduty-mcp --help
+uv run --directory /path/to/pagerduty-mcp-server python -m pagerduty_mcp --help
 
-# Test with your API key (replace with your actual token)
-PAGERDUTY_USER_API_KEY="your-token" uvx pagerduty-mcp --enable-write-tools
+# Test with your API key (replace with your actual token and path)
+PAGERDUTY_USER_API_KEY="your-token" uv run --directory /path/to/pagerduty-mcp-server python -m pagerduty_mcp --enable-write-tools
 ```
 
 **Note:** The server will be automatically started by VSCode when needed using the configuration in `.vscode/mcp.json`.
@@ -274,8 +276,9 @@ For GitHub remote MCP server connection issues:
 
 For PagerDuty local MCP server issues:
 
-1. **uvx/pipx**: Verify uvx is installed: `pip install uvx`
-2. **PagerDuty package**: Test installation: `uvx pagerduty-mcp --help`
+1. **uv**: Verify uv is available and local PagerDuty MCP server exists
+2. **PagerDuty package**: Test installation:
+   `uv run --directory /path/to/pagerduty-mcp-server python -m pagerduty_mcp --help`
 3. **API token**: Verify token has correct permissions in PagerDuty
 4. **Python environment**: Check Python version compatibility (3.8+)
 
@@ -287,13 +290,13 @@ For PagerDuty local MCP server issues:
 
    ```bash
    # Test Grafana MCP (Docker)
-   docker run --rm -i --network=host \
-     -e GRAFANA_URL="http://localhost:3000" \
+   docker run --rm -i --network=demo_currency_app_currency-network \
+     -e GRAFANA_URL="http://currency-grafana:3000" \
      -e GRAFANA_SERVICE_ACCOUNT_TOKEN="your-token" \
      mcp/grafana --help
 
-   # Test PagerDuty MCP (Local uvx)
-   PAGERDUTY_USER_API_KEY="your-token" uvx pagerduty-mcp --enable-write-tools
+   # Test PagerDuty MCP (Local uv)
+   PAGERDUTY_USER_API_KEY="your-token" uv run --directory /path/to/pagerduty-mcp-server python -m pagerduty_mcp --enable-write-tools
 
    # Test remote MCP connections (GitHub)
    # GitHub connection is handled automatically by VSCode using remote HTTP server
@@ -334,8 +337,8 @@ To use different Grafana transport modes or additional flags:
 
 ```json
 {
-  "servers": {
-    "grafana-mcp": {
+  "mcpServers": {
+    "grafana": {
       "type": "stdio",
       "command": "mcp-grafana",
       "args": [
@@ -361,8 +364,8 @@ If you prefer running GitHub MCP locally:
 
 ```json
 {
-  "servers": {
-    "github-mcp": {
+  "mcpServers": {
+    "github": {
       "type": "stdio",
       "command": "docker",
       "args": ["run", "--rm", "-i", "github-mcp-server"],
@@ -400,7 +403,8 @@ If you prefer running GitHub MCP locally:
 - Service and escalation policy information
 - Integration management
 - Analytics and reporting data
-- **Note**: Runs locally using `uvx pagerduty-mcp --enable-write-tools`
+- **Note**: Runs locally using
+  `uv run --directory ${PAGERDUTY_MCP_SERVER_DIR} python -m pagerduty_mcp --enable-write-tools`
 
 ---
 
@@ -428,7 +432,7 @@ to verify everything works.
 
 1. **Claude Code CLI**: Install from [docs.anthropic.com](https://docs.anthropic.com/en/docs/claude-code)
 2. **Docker**: Required for Grafana MCP server
-3. **Python 3.8+** with **uvx** (or pipx): Required for PagerDuty MCP server
+3. **Python 3.8+** with **uv**: Required for PagerDuty MCP server (with local server directory)
 
 ### Server Configuration Options
 
@@ -464,28 +468,47 @@ Create a `.mcp.json` file in your project root for team sharing (example provide
 ```json
 {
   "mcpServers": {
-    "github-mcp": {
-      "command": "claude",
-      "args": ["mcp", "proxy"],
-      "env": {
-        "MCP_SERVER_URL": "https://api.githubcopilot.com/mcp/",
-        "GITHUB_TOKEN": "your-github-token-here"
+    "github": {
+      "type": "http",
+      "url": "https://api.githubcopilot.com/mcp/",
+      "headers": {
+        "Authorization": "${GITHUB_TOKEN}"
       }
     },
-    "grafana-mcp": {
+    "grafana": {
       "command": "docker",
       "args": [
-        "run", "--rm", "-i", "--network=host",
-        "-e", "GRAFANA_URL=http://localhost:3000",
-        "-e", "GRAFANA_SERVICE_ACCOUNT_TOKEN=your-grafana-token-here",
-        "mcp/grafana"
-      ]
+        "run",
+        "--rm",
+        "-i",
+        "--network=demo_currency_app_currency-network",
+        "-e",
+        "GRAFANA_URL",
+        "-e",
+        "GRAFANA_SERVICE_ACCOUNT_TOKEN",
+        "mcp/grafana",
+        "-t",
+        "stdio"
+      ],
+      "env": {
+        "GRAFANA_URL": "http://currency-grafana:3000",
+        "GRAFANA_SERVICE_ACCOUNT_TOKEN": "${GRAFANA_SERVICE_ACCOUNT_TOKEN}"
+      }
     },
     "pagerduty-mcp": {
-      "command": "uvx",
-      "args": ["pagerduty-mcp", "--enable-write-tools"],
+      "command": "uv",
+      "args": [
+        "run",
+        "--directory",
+        "${PAGERDUTY_MCP_SERVER_DIR}",
+        "python",
+        "-m",
+        "pagerduty_mcp",
+        "--enable-write-tools"
+      ],
       "env": {
-        "PAGERDUTY_USER_API_KEY": "your-pagerduty-token-here"
+        "PAGERDUTY_USER_API_KEY": "${PAGERDUTY_USER_API_KEY}",
+        "PAGERDUTY_API_HOST": "https://api.pagerduty.com"
       }
     }
   }
@@ -500,25 +523,26 @@ Add servers individually using Claude Code CLI:
 
 ```bash
 # Add GitHub MCP server (remote hosted by GitHub)
-claude mcp add github-mcp --transport http https://api.githubcopilot.com/mcp/ \
+claude mcp add github --transport http https://api.githubcopilot.com/mcp/ \
   --env GITHUB_TOKEN="your-github-token-here"
 ```
 
 #### Claude Code Grafana MCP Server (Docker)
 
 ```bash
-# Add Grafana MCP server (local Docker container)
-claude mcp add grafana-mcp docker run --rm -i --network=host mcp/grafana \
-  --env GRAFANA_URL="http://localhost:3000" \
+# Add Grafana MCP server (Docker container in currency network)
+claude mcp add grafana docker run --rm -i --network=demo_currency_app_currency-network mcp/grafana \
+  --env GRAFANA_URL="http://currency-grafana:3000" \
   --env GRAFANA_SERVICE_ACCOUNT_TOKEN="your-grafana-token-here"
 ```
 
 #### Claude Code PagerDuty MCP Server (Local)
 
 ```bash
-# Add PagerDuty MCP server (local uvx/pipx)
-claude mcp add pagerduty-mcp uvx pagerduty-mcp --enable-write-tools \
-  --env PAGERDUTY_USER_API_KEY="your-pagerduty-token-here"
+# Add PagerDuty MCP server (local uv)
+claude mcp add pagerduty-mcp uv run --directory /path/to/pagerduty-mcp-server python -m pagerduty_mcp --enable-write-tools \
+  --env PAGERDUTY_USER_API_KEY="your-pagerduty-token-here" \
+  --env PAGERDUTY_API_HOST="https://api.pagerduty.com"
 ```
 
 ## Claude Code Authentication Setup
@@ -563,13 +587,13 @@ claude mcp list
 ### Get server details
 
 ```bash
-claude mcp get github-mcp
+claude mcp get github
 ```
 
 ### Remove a server
 
 ```bash
-claude mcp remove github-mcp
+claude mcp remove github
 ```
 
 ### Update server configuration
@@ -591,8 +615,8 @@ claude mcp add server-name [new-config...]
 claude mcp list
 
 # Check specific server status
-claude mcp get github-mcp
-claude mcp get grafana-mcp
+claude mcp get github
+claude mcp get grafana
 claude mcp get pagerduty-mcp
 ```
 
@@ -654,14 +678,14 @@ docker pull mcp/grafana
 docker images mcp/grafana
 ```
 
-#### "Command not found" (uvx/pipx)
+#### "Command not found" (uv)
 
 ```bash
-# Install uvx
-pip install uvx
+# Install uv (if not available)
+# pip install uv
 
 # Test PagerDuty MCP server
-uvx pagerduty-mcp --help
+uv run --directory /path/to/pagerduty-mcp-server python -m pagerduty_mcp --help
 ```
 
 ### Debug Commands
@@ -674,8 +698,8 @@ claude mcp get server-name
 claude --debug mcp list
 
 # Test Docker connectivity
-docker run --rm -i --network=host \
-  -e GRAFANA_URL="http://localhost:3000" \
+docker run --rm -i --network=demo_currency_app_currency-network \
+  -e GRAFANA_URL="http://currency-grafana:3000" \
   -e GRAFANA_SERVICE_ACCOUNT_TOKEN="your-token" \
   mcp/grafana --help
 ```
@@ -725,12 +749,11 @@ Use environment variables in `.mcp.json`:
 ```json
 {
   "mcpServers": {
-    "github-mcp": {
-      "command": "claude",
-      "args": ["mcp", "proxy"],
-      "env": {
-        "GITHUB_TOKEN": "${GITHUB_TOKEN}",
-        "MCP_SERVER_URL": "${GITHUB_MCP_URL:-https://api.githubcopilot.com/mcp/}"
+    "github": {
+      "type": "http",
+      "url": "${GITHUB_MCP_URL:-https://api.githubcopilot.com/mcp/}",
+      "headers": {
+        "Authorization": "${GITHUB_TOKEN}"
       }
     }
   }
@@ -742,6 +765,9 @@ Then set environment variables:
 ```bash
 export GITHUB_TOKEN="your-token"
 export GITHUB_MCP_URL="https://custom-github-mcp.com/"
+export PAGERDUTY_MCP_SERVER_DIR="/path/to/pagerduty-mcp-server"
+export PAGERDUTY_USER_API_KEY="your-pagerduty-token"
+export GRAFANA_SERVICE_ACCOUNT_TOKEN="your-grafana-token"
 ```
 
 ## Next Steps

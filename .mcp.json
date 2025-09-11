@@ -1,24 +1,26 @@
 {
   "mcpServers": {
     "github": {
-      "transport": "http",
+      "type": "http",
       "url": "https://api.githubcopilot.com/mcp/",
       "headers": {
-        "Authorization": "Bearer ${GITHUB_TOKEN}"
-      },
-      "env": {
-        "GITHUB_TOKEN": "${GITHUB_TOKEN}"
+        "Authorization": "${GITHUB_TOKEN}"
       }
     },
     "grafana": {
       "command": "docker",
       "args": [
-        "run", "--rm", "-i",
+        "run",
+        "--rm",
+        "-i",
         "--network=demo_currency_app_currency-network",
-        "-e", "GRAFANA_URL",
-        "-e", "GRAFANA_SERVICE_ACCOUNT_TOKEN",
+        "-e",
+        "GRAFANA_URL",
+        "-e",
+        "GRAFANA_SERVICE_ACCOUNT_TOKEN",
         "mcp/grafana",
-        "-t", "stdio"
+        "-t",
+        "stdio"
       ],
       "env": {
         "GRAFANA_URL": "http://currency-grafana:3000",
@@ -30,7 +32,7 @@
       "args": [
         "run",
         "--directory",
-        "/Users/rbird/workspace/pagerduty-mcp-server",
+        "${PAGERDUTY_MCP_SERVER_DIR}",
         "python",
         "-m",
         "pagerduty_mcp",

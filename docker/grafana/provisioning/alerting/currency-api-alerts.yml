@@ -496,3 +496,186 @@ groups:
           severity: warning
         notification_settings:
           receiver: pagerduty-warning
+
+      # Critical: Nginx Load Balancer Down
+      - uid: nginx-load-balancer-down
+        title: Nginx Load Balancer Down
+        condition: C
+        data:
+          - refId: A
+            queryType: ""
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: prometheus
+            model:
+              editorMode: code
+              expr: nginx_up
+              instant: true
+              intervalMs: 1000
+              legendFormat: __auto
+              maxDataPoints: 43200
+              range: false
+              refId: A
+          - refId: C
+            queryType: ""
+            relativeTimeRange:
+              from: 0
+              to: 0
+            datasourceUid: "__expr__"
+            model:
+              conditions:
+                - evaluator:
+                    params: [1]
+                    type: ne
+                  operator:
+                    type: and
+                  query:
+                    params: [C]
+                  reducer:
+                    params: []
+                    type: last
+                  type: query
+              datasource:
+                type: __expr__
+                uid: __expr__
+              expression: A
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: C
+              type: threshold
+        noDataState: NoData
+        execErrState: Error
+        for: 1m
+        keep_firing_for: 30s
+        annotations:
+          description: "The Nginx load balancer is not responding - all API traffic will fail"
+          summary: "Nginx load balancer is down"
+          severity: "critical"
+          runbook_url: "https://github.com/ralphbird/demo_currency_app/blob/main/docs/runbook.md#nginx-load-balancer-down"
+        labels:
+          severity: critical
+        notification_settings:
+          receiver: pagerduty-critical
+
+      # Warning: Nginx High Connection Count
+      - uid: nginx-high-connections
+        title: Nginx High Connection Count
+        condition: C
+        data:
+          - refId: A
+            queryType: ""
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: prometheus
+            model:
+              editorMode: code
+              expr: nginx_connections_active
+              instant: true
+              intervalMs: 1000
+              legendFormat: __auto
+              maxDataPoints: 43200
+              range: false
+              refId: A
+          - refId: C
+            queryType: ""
+            relativeTimeRange:
+              from: 0
+              to: 0
+            datasourceUid: "__expr__"
+            model:
+              conditions:
+                - evaluator:
+                    params: [100]
+                    type: gt
+                  operator:
+                    type: and
+                  query:
+                    params: [C]
+                  reducer:
+                    params: []
+                    type: last
+                  type: query
+              datasource:
+                type: __expr__
+                uid: __expr__
+              expression: A
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: C
+              type: threshold
+        noDataState: NoData
+        execErrState: Error
+        for: 3m
+        keep_firing_for: 30s
+        annotations:
+          description: "Nginx load balancer has over 100 active connections for 3 minutes (potential overload or attack)"
+          summary: "High connection count in Nginx load balancer"
+          severity: "warning"
+          runbook_url: "https://github.com/ralphbird/demo_currency_app/blob/main/docs/runbook.md#nginx-high-connections"
+        labels:
+          severity: warning
+        notification_settings:
+          receiver: pagerduty-warning
+
+      # Warning: Nginx Request Rate Drop
+      - uid: nginx-request-rate-drop
+        title: Nginx Request Rate Drop
+        condition: C
+        data:
+          - refId: A
+            queryType: ""
+            relativeTimeRange:
+              from: 600
+              to: 0
+            datasourceUid: prometheus
+            model:
+              editorMode: code
+              expr: rate(nginx_http_requests_total[5m])
+              instant: true
+              intervalMs: 1000
+              legendFormat: __auto
+              maxDataPoints: 43200
+              range: false
+              refId: A
+          - refId: C
+            queryType: ""
+            relativeTimeRange:
+              from: 0
+              to: 0
+            datasourceUid: "__expr__"
+            model:
+              conditions:
+                - evaluator:
+                    params: [0.1]
+                    type: lt
+                  operator:
+                    type: and
+                  query:
+                    params: [C]
+                  reducer:
+                    params: []
+                    type: last
+                  type: query
+              datasource:
+                type: __expr__
+                uid: __expr__
+              expression: A
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: C
+              type: threshold
+        noDataState: NoData
+        execErrState: Error
+        for: 5m
+        keep_firing_for: 30s
+        annotations:
+          description: "Nginx load balancer request rate has dropped below 0.1 RPS for 5 minutes (potential service disruption)"
+          summary: "Low request rate in Nginx load balancer"
+          severity: "warning"
+          runbook_url: "https://github.com/ralphbird/demo_currency_app/blob/main/docs/runbook.md#nginx-request-rate-drop"
+        labels:
+          severity: warning
+        notification_settings:
+          receiver: pagerduty-warning

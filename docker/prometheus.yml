@@ -21,6 +21,15 @@ scrape_configs:
     scrape_timeout: 5s
     scheme: http
 
+  # Nginx load balancer metrics
+  - job_name: "nginx"
+    static_configs:
+      - targets: ["nginx-exporter:9113"]
+    metrics_path: "/metrics"
+    scrape_interval: 5s
+    scrape_timeout: 5s
+    scheme: http
+
   # Additional services can be added here as needed
 
   # cAdvisor container metrics (ARM64 compatible)

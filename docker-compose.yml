@@ -82,6 +82,20 @@ services:
       retries: 3
       start_period: 10s
 
+  # Nginx Prometheus Exporter
+  nginx-exporter:
+    image: nginx/nginx-prometheus-exporter:latest
+    container_name: currency-nginx-exporter
+    command:
+      - '-nginx.scrape-uri=http://nginx/nginx_status'
+    ports:
+      - "9113:9113"
+    depends_on:
+      - nginx
+    restart: unless-stopped
+    networks:
+      - currency-network
+
   # Prometheus for metrics collection
   prometheus:
     image: prom/prometheus:latest

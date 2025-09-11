@@ -15,7 +15,7 @@ help:
 	@echo "  make rebuild  - Rebuild and restart all Docker services"
 	@echo "  make build    - Build Docker containers only"
 	@echo "  make test     - Run test suite with coverage"
-	@echo "  make quality  - Run code quality checks (format, lint, type-check)"
+	@echo "  make quality  - Run code quality checks (format, lint, type-check, markdownlint)"
 	@echo "  make clean    - Clean build artifacts and caches"
 	@echo "  make docker-clean - Clean all Docker resources"
 	@echo ""
@@ -132,6 +132,8 @@ quality:
 	poetry run ruff check --fix currency_app/ common/ tests/
 	@echo "📋 Type checking..."
 	poetry run pyright currency_app/ common/ tests/
+	@echo "📄 Markdown linting..."
+	poetry run pre-commit run markdownlint --all-files || true
 	@echo "✅ Quality checks completed!"
 
 # Format code only

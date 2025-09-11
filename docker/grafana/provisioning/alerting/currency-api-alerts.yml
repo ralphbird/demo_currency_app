@@ -175,7 +175,7 @@ groups:
               maxDataPoints: 43200
               refId: C
               type: threshold
-        noDataState: NoData
+        noDataState: OK
         execErrState: Error
         for: 1m
         keep_firing_for: 30s
@@ -237,7 +237,7 @@ groups:
               maxDataPoints: 43200
               refId: C
               type: threshold
-        noDataState: NoData
+        noDataState: OK
         execErrState: Error
         for: 3m
         keep_firing_for: 30s
@@ -299,7 +299,7 @@ groups:
               maxDataPoints: 43200
               refId: C
               type: threshold
-        noDataState: NoData
+        noDataState: OK
         execErrState: Error
         for: 5m
         keep_firing_for: 30s
@@ -361,7 +361,7 @@ groups:
               maxDataPoints: 43200
               refId: C
               type: threshold
-        noDataState: NoData
+        noDataState: OK
         execErrState: Error
         for: 2m
         keep_firing_for: 30s
@@ -422,7 +422,7 @@ groups:
               maxDataPoints: 43200
               refId: C
               type: threshold
-        noDataState: NoData
+        noDataState: OK
         execErrState: Error
         for: 1m
         keep_firing_for: 30s
@@ -483,7 +483,7 @@ groups:
               maxDataPoints: 43200
               refId: C
               type: threshold
-        noDataState: NoData
+        noDataState: OK
         execErrState: Error
         for: 1m
         keep_firing_for: 30s
@@ -605,7 +605,7 @@ groups:
               maxDataPoints: 43200
               refId: C
               type: threshold
-        noDataState: NoData
+        noDataState: OK
         execErrState: Error
         for: 3m
         keep_firing_for: 30s
@@ -666,7 +666,7 @@ groups:
               maxDataPoints: 43200
               refId: C
               type: threshold
-        noDataState: NoData
+        noDataState: OK
         execErrState: Error
         for: 5m
         keep_firing_for: 30s

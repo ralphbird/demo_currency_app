@@ -22,6 +22,140 @@ Docker/system commands.
 
 ---
 
+## 🔍 LOAD SOURCE ANALYSIS PROCEDURES
+
+### Universal Load Analysis (Required for ALL load-related incidents)
+
+> **Use these procedures for High Request Rate, CPU, Memory, or File Descriptor alerts**
+>
+> **Note**: Commands below use Docker logs, but you can perform equivalent queries using:
+>
+> - **Grafana/Loki**: Log queries and dashboards
+> - **API calls**: Direct service endpoints for metrics
+> - **MCP tools**: Grafana MCP server for automated queries
+> - **Other monitoring tools**: Prometheus queries, Jaeger traces, etc.
+
+#### Step 1: Multi-Dimensional Traffic Analysis
+
+**Identify traffic patterns across IP, Account, and User dimensions:**
+
+```bash
+# Analyze request sources by IP address
+docker logs currency-api --since=10m | grep -oE "[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+" | sort | uniq -c | sort -nr | head -10
+
+# Get top IP for detailed analysis
+TOP_IP=$(docker logs currency-api --since=10m | grep -oE "[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+" | sort | uniq -c | sort -nr | head -1 | awk '{print $2}')
+echo "Top IP: $TOP_IP - Request count:"
+docker logs currency-api --since=10m | grep "$TOP_IP" | wc -l
+
+# Analyze by account ID patterns
+docker logs currency-api --since=10m | grep -oE '"account_id":"[^"]*"' | sort | uniq -c | sort -nr | head -10
+
+# Analyze by user ID patterns
+docker logs currency-api --since=10m | grep -oE '"user_id":"[^"]*"' | sort | uniq -c | sort -nr | head -10
+
+# Get top account for detailed analysis
+TOP_ACCOUNT=$(docker logs currency-api --since=10m | grep -oE '"account_id":"[^"]*"' | sort | uniq -c | sort -nr | head -1 | awk '{print $2}')
+echo "Top account: $TOP_ACCOUNT - Request count:"
+docker logs currency-api --since=10m | grep "$TOP_ACCOUNT" | wc -l
+
+# Check users within top account
+echo "Users in top account:"
+docker logs currency-api --since=10m | grep "$TOP_ACCOUNT" | grep -oE '"user_id":"[^"]*"' | sort | uniq -c | sort -nr
+```
+
+#### Step 2: Behavioral Pattern Analysis
+
+**Analyze authentication and request patterns:**
+
+```bash
+# Check authentication failures by account/user
+docker logs currency-api --since=10m | grep -E "(401|403)" | grep -oE '"account_id":"[^"]*"' | sort | uniq -c | sort -nr | head -5
+
+# Look for rapid-fire requests from same account/user combinations
+docker logs currency-api --since=5m | grep -E '"account_id":"[^"]*".*"user_id":"[^"]*"' | sort | uniq -c | sort -nr | head -5
+
+# Check for rate limit violations
+docker logs currency-api --since=10m | grep -E "(rate.*limit|too.*many.*requests)" | grep -oE '"account_id":"[^"]*"' | sort | uniq -c
+
+# Analyze endpoint usage patterns
+docker logs currency-api --since=10m | grep -oE "(GET|POST) [^ ]+" | sort | uniq -c | sort -nr
+
+# Check for unusual user agent patterns
+docker logs currency-api --since=10m | grep -oE 'User-Agent: [^"]*' | sort | uniq -c | sort -nr | head -5
+```
+
+#### Step 3: Resource Correlation Analysis
+
+**Correlate load patterns with system resources:**
+
+```bash
+# Check current system resources
+docker stats currency-api --no-stream
+
+# Correlate request volume with resource usage
+echo "Request count in last 5 minutes:"
+docker logs currency-api --since=5m | wc -l
+
+# Check for large responses that might impact memory
+docker logs currency-api --since=10m | grep -E "200.*[0-9]{4,}" | grep -oE '"account_id":"[^"]*"' | sort | uniq -c | sort -nr | head -5
+
+# Check for data-heavy endpoint usage by account
+docker logs currency-api --since=10m | grep -E "(history|rates|convert)" | grep -oE '"account_id":"[^"]*"' | sort | uniq -c | sort -nr | head-5
+```
+
+#### Step 4: Load Classification Decision Tree
+
+**Based on analysis results, classify the load source:**
+
+1. **Legitimate Traffic Spike** (Distributed IPs/accounts/users, normal patterns)
+   - Multiple IPs, accounts, users contributing
+   - Authentication success rates normal
+   - Request patterns match business usage
+   - **Action:** Monitor closely, consider scaling with business context
+
+2. **IP-Based Abuse** (Concentrated traffic from few IPs)
+   - Few IPs generating majority of traffic
+   - May include failed authentication attempts
+   - **Action:** Consider IP-based rate limiting, document for blocking
+
+3. **Account-Based Abuse** (Single account excessive load)
+   - One or few accounts generating disproportionate load
+   - May involve multiple users within account
+   - **Action:** Account management escalation, account-level throttling
+
+4. **User-Based Abuse** (Single user excessive load)
+   - Specific user generating excessive requests
+   - Check if associated with suspicious account patterns
+   - **Action:** User-level throttling, account management review
+
+5. **Endpoint Abuse** (Specific endpoint being hammered)
+   - Unusual concentration on specific API endpoints
+   - Check if endpoint has performance issues
+   - **Action:** Endpoint-specific rate limiting, performance review
+
+6. **System Issue** (Load without clear external cause)
+   - No obvious traffic source correlation
+   - May indicate internal loops, memory leaks, or bugs
+   - **Action:** System restart, code investigation
+
+### Load Analysis Documentation Template
+
+**Always document findings in incident notes using this format:**
+
+```text
+Load Source Analysis Results:
+- Analysis Time: [timestamp]
+- Top 3 IPs: [IPs and request counts]
+- Top 3 Accounts: [Account IDs and request counts]
+- Top 3 Users: [User IDs and request counts]
+- Classification: [Legitimate/IP Abuse/Account Abuse/User Abuse/Endpoint Abuse/System Issue]
+- Correlation with Resources: [CPU/Memory/Response time correlation]
+- Recommended Action: [Based on classification above]
+```
+
+---
+
 ## 🚨 CRITICAL ALERTS
 
 ### Currency API Service Down
@@ -108,7 +242,7 @@ Docker/system commands.
 **Severity:** Critical
 **PagerDuty:** Immediately escalated
 
-#### Immediate Response (Target: 3 minutes)
+#### Error Rate Immediate Response (Target: 3 minutes)
 
 1. **Identify error patterns:**
 
@@ -183,54 +317,43 @@ Docker/system commands.
 **Severity:** Warning
 **PagerDuty:** Warning notification
 
-#### Response Steps (Target: 5 minutes)
+#### Step 1: Request Rate Load Source Analysis (REQUIRED)
 
-1. **Analyze traffic patterns:**
+**🔍 Perform complete load source analysis before any other action:**
 
-   ```bash
-   # Check current request rate in Prometheus
-   # Navigate to: http://localhost:9090
-   # Query: sum(rate(http_requests_total{job="currency-api"}[2m]))
+👉 **Go to: [Load Source Analysis Procedures](#-load-source-analysis-procedures)**
 
-   # Check request sources in logs
-   docker logs currency-api --since=5m | grep -E "GET|POST" | tail -20
-   ```
+Complete all 4 steps of the Universal Load Analysis to identify traffic sources and
+classify the load pattern.
 
-2. **Identify potential causes:**
+#### Step 2: Request Rate Specific Checks
 
-   ```bash
-   # Check for repeated requests from same IP
-   docker logs currency-api --since=10m | grep -oE "[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+" | sort | uniq -c | sort -nr | head -10
+**After completing load source analysis, perform these request-rate specific checks:**
 
-   # Check endpoint distribution
-   docker logs currency-api --since=5m | grep -oE "(GET|POST) [^ ]+" | sort | uniq -c | sort -nr
-   ```
+```bash
+# Check current request rate in Prometheus
+# Navigate to: http://localhost:9090
+# Query: sum(rate(http_requests_total{job="currency-api"}[2m]))
 
-3. **Monitor system impact:**
+# Monitor system impact from high request rate
+docker stats currency-api --no-stream
 
-   ```bash
-   # Check if high traffic is causing performance issues
-   docker stats currency-api --no-stream
+# Check response times to see if high rate is affecting performance
+curl -w "@curl-format.txt" -o /dev/null -s http://localhost:8000/health
+```
 
-   # Check response times
-   curl -w "@curl-format.txt" -o /dev/null -s http://localhost:8000/health
-   ```
+#### Step 3: Request Rate Resolution Actions
 
-#### Resolution Actions
+**Apply resolution based on load classification from Step 1:**
 
-1. **If legitimate traffic spike:**
-   - Monitor system resources closely
-   - Consider scaling if using orchestration
-   - Alert business stakeholders if needed
+👉 **Use the decision tree from: [Step 4: Load Classification Decision Tree](#step-4-load-classification-decision-tree)**
 
-2. **If potential abuse:**
+**Request-rate specific considerations:**
 
-   ```bash
-   # Check authentication patterns
-   docker logs currency-api --since=10m | grep -i "401\|403" | tail -10
-
-   # Consider rate limiting (review nginx/reverse proxy config)
-   ```
+- If high rate is impacting performance, prioritize rate limiting over scaling
+- Check if rate increase correlates with business events or marketing campaigns
+- Consider temporary rate limits while investigating source
+- Document rate patterns in incident timeline for trend analysis
 
 **Escalation:** If traffic continues >50 RPS for 10+ minutes or causes performance degradation.
 
@@ -240,60 +363,46 @@ Docker/system commands.
 **Severity:** Warning
 **PagerDuty:** Warning notification
 
-#### Response Steps (Target: 3 minutes)
+#### Step 1: CPU Load Source Analysis (REQUIRED)
 
-1. **Confirm CPU utilization:**
+**🔍 Perform complete load source analysis before any other action:**
 
-   ```bash
-   # Check container CPU usage
-   docker stats currency-api --no-stream
+👉 **Go to: [Load Source Analysis Procedures](#-load-source-analysis-procedures)**
 
-   # Check host CPU usage
-   top -p $(docker inspect --format='{{.State.Pid}}' currency-api)
-   ```
+Complete all 4 steps of the Universal Load Analysis to identify traffic sources and
+classify the load pattern.
 
-2. **Identify CPU-intensive processes:**
+#### Step 2: CPU-Specific Diagnostics
 
-   ```bash
-   # Check if it's related to request volume
-   docker logs currency-api --since=5m | wc -l
+**After completing load source analysis, perform these CPU-specific checks:**
 
-   # Look for processing errors or loops
-   docker logs currency-api --since=5m | grep -i -E "error|exception|timeout"
-   ```
+```bash
+# Correlate CPU spike with request volume
+docker logs currency-api --since=5m | wc -l
+docker stats currency-api --no-stream
 
-3. **Check for resource contention:**
+# Check for processing errors that might cause CPU loops
+docker logs currency-api --since=5m | grep -i -E "error|exception|timeout|retry"
 
-   ```bash
-   # Check all container resource usage
-   docker stats --no-stream
+# Check for database query issues causing high CPU
+docker logs currency-api --since=5m | grep -i -E "query|database|sql"
 
-   # Check system load
-   uptime
-   ```
+# Check host system CPU usage
+top -p $(docker inspect --format='{{.State.Pid}}' currency-api)
+```
 
-#### CPU Resolution Actions
+#### Step 3: CPU Resolution Actions
 
-1. **Immediate mitigation:**
+**Apply resolution based on load classification from Step 1:**
 
-   ```bash
-   # If sustained high CPU with no errors, consider restart
-   docker restart currency-api
+👉 **Use the decision tree from: [Step 4: Load Classification Decision Tree](#step-4-load-classification-decision-tree)**
 
-   # Monitor CPU after restart
-   docker stats currency-api --no-stream
-   ```
+**CPU-specific considerations:**
 
-2. **If CPU remains high:**
-
-   ```bash
-   # Check database query performance
-   docker exec -it postgres psql -U currency_user -d currency_db -c "
-   SELECT query, calls, total_time, mean_time
-   FROM pg_stat_statements
-   ORDER BY total_time DESC
-   LIMIT 10;"
-   ```
+- If CPU spikes are correlated with specific requests, investigate those endpoints
+- Consider database query optimization before scaling CPU resources
+- Check for infinite loops or processing errors in application logs
+- Monitor for memory leaks that might cause increased garbage collection CPU usage
 
 **Escalation:** If CPU >90% for 10+ minutes or causes request timeouts.
 
@@ -303,52 +412,142 @@ Docker/system commands.
 **Severity:** Warning
 **PagerDuty:** Warning notification
 
-#### Memory Response Steps (Target: 3 minutes)
+#### Step 1: Memory Load Source Analysis (REQUIRED)
 
-1. **Analyze memory usage patterns:**
+**🔍 Perform complete load source analysis before any other action:**
+
+👉 **Go to: [Load Source Analysis Procedures](#-load-source-analysis-procedures)**
+
+Complete all 4 steps of the Universal Load Analysis to identify traffic sources and
+classify the load pattern.
+
+1. **Correlate memory usage with request patterns:**
 
    ```bash
-   # Check current memory usage
+   # Check if memory spike correlates with request volume/type
    docker stats currency-api --no-stream
+   docker logs currency-api --since=10m | wc -l
 
+   # Look for requests that might generate large responses
+   docker logs currency-api --since=10m | grep -E "(convert|rates|history)" | wc -l
+   ```
+
+2. **Analyze traffic sources during memory spike (IP, Account, User):**
+
+   ```bash
+   # Check for concentrated requests from specific IPs
+   docker logs currency-api --since=10m | grep -oE "[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+" | sort | uniq -c | sort -nr | head -10
+
+   # Check for specific accounts making memory-intensive requests
+   docker logs currency-api --since=10m | grep -oE '"account_id":"[^"]*"' | sort | uniq -c | sort -nr | head -10
+
+   # Check for specific users making memory-intensive requests
+   docker logs currency-api --since=10m | grep -oE '"user_id":"[^"]*"' | sort | uniq -c | sort -nr | head -10
+
+   # Cross-reference top account with memory usage patterns
+   TOP_ACCOUNT_MEM=$(docker logs currency-api --since=10m | grep -oE '"account_id":"[^"]*"' | sort | uniq -c | sort -nr | head -1 | awk '{print $2}')
+   echo "Top account during memory spike: $TOP_ACCOUNT_MEM"
+   docker logs currency-api --since=10m | grep "$TOP_ACCOUNT_MEM" | wc -l
+
+   # Look for large response patterns by account
+   docker logs currency-api --since=10m | grep -E "200.*[0-9]{4,}" | grep -oE '"account_id":"[^"]*"' | sort | uniq -c | sort -nr | head -5
+
+   # Check for accounts requesting data-heavy endpoints
+   docker logs currency-api --since=10m | grep -E "(history|rates)" | grep -oE '"account_id":"[^"]*"' | sort | uniq -c | sort -nr | head -5
+   ```
+
+3. **Check for memory leak vs. legitimate usage:**
+
+   ```bash
+   # Check for gradual memory increase (potential leak)
+   echo "Monitoring memory trend..."
+   for i in {1..3}; do
+     docker stats currency-api --no-stream | awk 'NR==2 {print "Sample '$i':", $3, $4}'
+     sleep 30
+   done
+
+   # Look for memory-related errors
+   docker logs currency-api --since=10m | grep -i -E "memory|oom|alloc|leak"
+   ```
+
+#### Step 2: Memory-Specific Diagnostics
+
+**After completing load source analysis, perform these memory-specific checks:**
+
+```bash
+# Check current memory usage and trends
+docker stats currency-api --no-stream
+
+# Monitor memory growth over time (potential leak detection)
+echo "Monitoring memory for 90 seconds..."
+for i in {1..3}; do
+  docker stats currency-api --no-stream | awk 'NR==2 {print "Sample '$i':", $3, $4}'
+  sleep 30
+done
+
+# Check for memory-related errors
+docker logs currency-api --since=10m | grep -i -E "memory|oom|alloc|leak"
+
+# Check database connection pool memory usage
+docker exec -it postgres psql -U currency_user -d currency_db -c "
+SELECT count(*) as connections, state
+FROM pg_stat_activity
+GROUP BY state;"
+```
+
+#### Step 3: Resolution Actions
+
+**Apply resolution based on load classification from Step 1:**
+
+👉 **Use the decision tree from: [Step 4: Load Classification Decision Tree](#step-4-load-classification-decision-tree)**
+
+**Memory-specific considerations:**
+
+   ```bash
    # Check memory details inside container
    docker exec currency-api cat /proc/meminfo | grep -E "MemTotal|MemAvailable"
    ```
 
-2. **Look for memory leaks:**
+1. **Check application behavior:**
 
    ```bash
-   # Check for gradual memory increase
-   # Monitor for 2-3 minutes
-   for i in {1..6}; do
-     docker stats currency-api --no-stream | awk 'NR==2 {print $3, $4}'
-     sleep 30
-   done
-   ```
-
-3. **Check application behavior:**
-
-   ```bash
-   # Look for memory-related errors
-   docker logs currency-api --since=10m | grep -i -E "memory|oom|alloc"
-
-   # Check for large response payloads
-   docker logs currency-api --since=5m | grep -E "200.*[0-9]{4,}" | tail -5
+   # Check database connection pool memory usage
+   docker exec -it postgres psql -U currency_user -d currency_db -c "
+   SELECT count(*) as connections, state
+   FROM pg_stat_activity
+   GROUP BY state;"
    ```
 
 #### Memory Resolution Actions
 
-1. **Immediate mitigation:**
+**Based on memory load source analysis:**
+
+1. **If memory spike due to legitimate high traffic/large responses:**
+   - Document correlation between traffic patterns and memory usage
+   - Monitor if memory usage stabilizes or continues growing
+   - Consider response size optimization before scaling
+
+2. **If memory spike due to specific account/IP requesting large data:**
 
    ```bash
-   # If memory appears to be leaking, restart container
+   # Document account/IP patterns causing memory spikes
+   # Consider response pagination or rate limiting for large requests
+   # Escalate to account management if needed
+   ```
+
+3. **If gradual memory increase detected (potential memory leak):**
+
+   ```bash
+   # Restart container to clear potential memory leak
    docker restart currency-api
 
    # Monitor memory after restart
    docker stats currency-api --no-stream
+
+   # Document memory growth pattern for development team
    ```
 
-2. **If memory usage remains high:**
+4. **If memory spike due to database connection issues:**
 
    ```bash
    # Check database connection pool
@@ -356,7 +555,11 @@ Docker/system commands.
    SELECT count(*) as connections, state
    FROM pg_stat_activity
    GROUP BY state;"
+
+   # Consider connection pool tuning before scaling
    ```
+
+**IMPORTANT:** Understand memory consumption pattern before considering scaling memory limits.
 
 **Escalation:** If memory >1.5GB or shows continuous growth pattern.
 
@@ -366,53 +569,52 @@ Docker/system commands.
 **Severity:** Warning
 **PagerDuty:** Warning notification
 
-#### Response Steps (Target: 2 minutes)
+#### Step 1: File Descriptor Load Source Analysis (REQUIRED)
 
-1. **Check file descriptor usage:**
+**🔍 Perform complete load source analysis before any other action:**
 
-   ```bash
-   # Check current FD usage
-   docker exec currency-api ls /proc/self/fd | wc -l
+👉 **Go to: [Load Source Analysis Procedures](#-load-source-analysis-procedures)**
 
-   # Check FD limit
-   docker exec currency-api ulimit -n
-   ```
+Complete all 4 steps of the Universal Load Analysis to identify traffic sources and
+classify the load pattern.
 
-2. **Identify FD usage patterns:**
+#### Step 2: File Descriptor Specific Diagnostics
 
-   ```bash
-   # Check what's consuming file descriptors
-   docker exec currency-api lsof -p 1 | head -20
+**After completing load source analysis, perform these FD-specific checks:**
 
-   # Check for socket connections
-   docker exec currency-api ss -tuln | wc -l
-   ```
+```bash
+# Check current FD usage and limit
+docker exec currency-api ls /proc/self/fd | wc -l
+docker exec currency-api ulimit -n
 
-3. **Look for connection leaks:**
+# Identify what's consuming file descriptors
+docker exec currency-api lsof -p 1 | head -20
 
-   ```bash
-   # Check database connections
-   docker exec -it postgres psql -U currency_user -d currency_db -c "
-   SELECT count(*) as active_connections
-   FROM pg_stat_activity
-   WHERE state = 'active';"
+# Check for socket connections
+docker exec currency-api ss -tuln | wc -l
 
-   # Check network connections
-   docker exec currency-api netstat -an | grep ESTABLISHED | wc -l
-   ```
+# Check database connections
+docker exec -it postgres psql -U currency_user -d currency_db -c "
+SELECT count(*) as active_connections
+FROM pg_stat_activity
+WHERE state = 'active';"
 
-#### FD Resolution Actions
+# Check network connections
+docker exec currency-api netstat -an | grep ESTABLISHED | wc -l
+```
 
-1. **Immediate mitigation:**
+#### Step 3: File Descriptor Resolution Actions
 
-   ```bash
-   # Restart to clear leaked connections
-   docker restart currency-api
+**Apply resolution based on load classification from Step 1:**
 
-   # Verify FD usage after restart
-   sleep 10
-   docker exec currency-api ls /proc/self/fd | wc -l
-   ```
+👉 **Use the decision tree from: [Step 4: Load Classification Decision Tree](#step-4-load-classification-decision-tree)**
+
+**FD-specific considerations:**
+
+- High FD usage often indicates connection leaks or excessive concurrent connections
+- Check if increase correlates with high request rate from load source analysis
+- Database connection pooling issues are common causes
+- Consider connection limits before restarting services
 
 **Escalation:** If FD usage >90% or restart doesn't resolve the issue.
 
@@ -532,203 +734,216 @@ Docker/system commands.
 
 **Escalation:** If average response time >1 second or trend continues rising.
 
+### Nginx Load Balancer Down
+
+**Alert:** `nginx_up != 1` for 1+ minute
+**Severity:** Critical
+**PagerDuty:** Immediately escalated
+
+#### Nginx Immediate Response (Target: 2 minutes)
+
+1. **Verify nginx container status:**
+
+   ```bash
+   # Check if nginx container is running
+   docker ps | grep nginx
+
+   # Check nginx health
+   curl -f http://localhost/ || echo "Nginx unreachable"
+   ```
+
+2. **Check nginx logs:**
+
+   ```bash
+   # View nginx logs
+   docker logs nginx --tail=50 -f
+
+   # Check for configuration errors
+   docker logs nginx --since=10m | grep -i error
+   ```
+
+3. **Quick restart attempt:**
+
+   ```bash
+   # Restart nginx service
+   docker restart nginx
+
+   # Monitor restart progress
+   docker logs nginx --tail=20 -f
+   ```
+
+#### Nginx Deep Investigation (if restart fails)
+
+1. **Check nginx configuration:**
+
+   ```bash
+   # Test nginx configuration
+   docker exec nginx nginx -t
+
+   # Check configuration files
+   docker exec nginx cat /etc/nginx/nginx.conf
+   ```
+
+2. **Check upstream services:**
+
+   ```bash
+   # Verify backend services are accessible
+   curl -f http://localhost:8000/health
+
+   # Check if nginx can reach backends
+   docker exec nginx curl -f http://currency-api:8000/health
+   ```
+
+**Escalation:** If nginx doesn't recover within 5 minutes, escalate immediately.
+
+### Nginx High Connections
+
+**Alert:** `nginx_connections_active > 100` for 1+ minute
+**Severity:** Warning
+**PagerDuty:** Warning notification
+
+#### Step 1: Connection Load Source Analysis (REQUIRED)
+
+**🔍 Perform complete load source analysis before any other action:**
+
+👉 **Go to: [Load Source Analysis Procedures](#-load-source-analysis-procedures)**
+
+Complete all 4 steps of the Universal Load Analysis to identify traffic sources and
+classify the load pattern.
+
+#### Step 2: Connection Analysis
+
+**After completing load source analysis, perform nginx-specific checks:**
+
+```bash
+# Check current connection status
+curl -s http://localhost/nginx_status | grep -E "(Active|Reading|Writing|Waiting)"
+
+# Monitor connection patterns
+docker logs nginx --since=5m | grep -oE "[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+" | sort | uniq -c | sort -nr | head-10
+
+# Check for connection timeouts or errors
+docker logs nginx --since=10m | grep -i -E "(timeout|error|limit)"
+```
+
+#### Step 3: Nginx Connection Resolution Actions
+
+**Apply resolution based on load classification from Step 1:**
+
+👉 **Use the decision tree from: [Step 4: Load Classification Decision Tree](#step-4-load-classification-decision-tree)**
+
+**Connection-specific considerations:**
+
+- High connections often indicate traffic spikes or slow backend responses
+- Check if connections are legitimate traffic or potential DDoS
+- Consider connection limits and rate limiting before scaling
+- Monitor backend response times that may cause connection buildup
+
+**Escalation:** If connections >200 or backend services show stress.
+
+### Nginx Request Rate Drop
+
+**Alert:** `rate(nginx_http_requests_total[5m]) < 0.1` for 1+ minute
+**Severity:** Warning
+**PagerDuty:** Warning notification
+
+#### Request Rate Drop Analysis (Target: 3 minutes)
+
+1. **Verify the drop is real:**
+
+   ```bash
+   # Check current nginx request rate
+   curl -s http://localhost/nginx_status
+
+   # Compare with backend API rate
+   curl -s http://localhost:8000/metrics | grep http_requests_total
+
+   # Check if nginx is processing requests
+   docker logs nginx --since=5m | tail -20
+   ```
+
+2. **Check for nginx issues:**
+
+   ```bash
+   # Check nginx error logs
+   docker logs nginx --since=10m | grep -i error
+
+   # Verify nginx is accepting connections
+   curl -I http://localhost/
+
+   # Check upstream connectivity
+   docker exec nginx curl -f http://currency-api:8000/health
+   ```
+
+3. **Analyze potential causes:**
+
+   ```bash
+   # Check if backend services are healthy
+   curl -f http://localhost:8000/health
+
+   # Look for rate limiting or blocking
+   docker logs nginx --since=10m | grep -E "(limit|block|deny)"
+
+   # Check system resources
+   docker stats nginx --no-stream
+   ```
+
+#### Request Rate Drop Resolution
+
+1. **If nginx configuration issue:**
+
+   ```bash
+   # Test nginx configuration
+   docker exec nginx nginx -t
+
+   # Reload nginx if configuration is valid
+   docker exec nginx nginx -s reload
+   ```
+
+2. **If upstream connectivity issue:**
+
+   ```bash
+   # Check backend services
+   docker ps | grep currency-api
+
+   # Restart backend if needed (with approval)
+   # docker restart currency-api
+   ```
+
+**Escalation:** If request rate doesn't recover within 10 minutes or affects user traffic.
+
 ---
 
 ## 🔧 MAINTENANCE PROCEDURES
 
-### JWT Token Management
+> **Quick Commands**: For common maintenance commands, see [Common Commands Reference](#-common-commands-reference)
 
-#### Generate New JWT Tokens
+### Service Operations
 
-For testing or integration purposes:
+#### Deployment and Rollback
 
-```bash
-# Generate a test token (expires in 1 hour)
-poetry run python -c "
-from currency_app.auth.jwt_auth import generate_jwt_token
-token = generate_jwt_token('test-account', 'test-user')
-print(f'JWT Token: {token}')
-"
-
-# Generate a long-lived token (24 hours)
-poetry run python -c "
-from currency_app.auth.jwt_auth import generate_jwt_token
-from datetime import timedelta
-token = generate_jwt_token('prod-account', 'service-user', expires_delta=timedelta(hours=24))
-print(f'Long-lived JWT Token: {token}')
-"
-```
-
-#### Rotate JWT Secret Key
-
-1. **Generate new secret:**
-
-   ```bash
-   # Generate new JWT secret
-   openssl rand -hex 32
-   ```
-
-2. **Update environment:**
-
-   ```bash
-   # Update docker-compose.yml or .env file
-   # Set new JWT_SECRET_KEY value
-
-   # Restart services to pick up new secret
-   make down
-   make up
-   ```
-
-3. **Verify new tokens:**
-
-   ```bash
-   # Test with new token
-   NEW_TOKEN=$(poetry run python -c "from currency_app.auth.jwt_auth import generate_jwt_token; print(generate_jwt_token('test', 'test'))")
-   curl -H "Authorization: Bearer $NEW_TOKEN" http://localhost:8000/api/v1/rates
-   ```
-
-### Database Maintenance
-
-#### PostgreSQL Health Checks
-
-```bash
-# Check database connectivity
-docker exec -it postgres psql -U currency_user -d currency_db -c "SELECT version();"
-
-# Check database size
-docker exec -it postgres psql -U currency_user -d currency_db -c "
-SELECT pg_size_pretty(pg_database_size('currency_db')) as db_size;"
-
-# Check table sizes
-docker exec -it postgres psql -U currency_user -d currency_db -c "
-SELECT
-    schemaname,
-    tablename,
-    pg_size_pretty(pg_total_relation_size(schemaname||'.'||tablename)) as size
-FROM pg_tables
-WHERE schemaname = 'public'
-ORDER BY pg_total_relation_size(schemaname||'.'||tablename) DESC;"
-```
-
-#### Database Backup Procedures
-
-```bash
-# Create database backup
-docker exec postgres pg_dump -U currency_user -d currency_db > backup_$(date +%Y%m%d_%H%M%S).sql
-
-# Compress backup
-gzip backup_$(date +%Y%m%d_%H%M%S).sql
-
-# Verify backup file
-ls -la backup_*.sql.gz
-```
-
-#### Database Restore (Emergency)
-
-```bash
-# Stop API service first
-docker stop currency-api
-
-# Restore from backup
-gunzip -c backup_YYYYMMDD_HHMMSS.sql.gz | docker exec -i postgres psql -U currency_user -d currency_db
-
-# Restart API service
-docker start currency-api
-
-# Verify restore
-docker exec -it postgres psql -U currency_user -d currency_db -c "
-SELECT COUNT(*) FROM exchange_rates;
-SELECT COUNT(*) FROM historical_rates;
-SELECT COUNT(*) FROM conversions;"
-```
-
-#### Database Performance Maintenance
-
-```bash
-# Update table statistics
-docker exec -it postgres psql -U currency_user -d currency_db -c "ANALYZE;"
-
-# Vacuum tables
-docker exec -it postgres psql -U currency_user -d currency_db -c "VACUUM ANALYZE;"
-
-# Check for bloated tables
-docker exec -it postgres psql -U currency_user -d currency_db -c "
-SELECT schemaname, tablename, n_dead_tup, n_live_tup,
-       round(n_dead_tup::numeric / (n_dead_tup + n_live_tup)::numeric * 100, 2) as dead_pct
-FROM pg_stat_user_tables
-WHERE n_dead_tup > 0
-ORDER BY dead_pct DESC;"
-```
-
-### Exchange Rate Data Management
-
-#### Update Exchange Rates
-
-```bash
-# Regenerate demo data with fresh rates
-poetry run python scripts/generate_demo_data.py
-
-# Check rate update timestamp
-docker exec -it postgres psql -U currency_user -d currency_db -c "
-SELECT currency_code, rate, last_updated
-FROM exchange_rates
-ORDER BY last_updated DESC;"
-
-# Verify rate consistency
-docker exec -it postgres psql -U currency_user -d currency_db -c "
-SELECT currency_code, rate
-FROM exchange_rates
-WHERE rate <= 0 OR rate IS NULL;"
-```
-
-#### Validate Rate Data Integrity
-
-```bash
-# Check for missing base currency (USD should always be 1.0)
-docker exec -it postgres psql -U currency_user -d currency_db -c "
-SELECT * FROM exchange_rates WHERE currency_code = 'USD';"
-
-# Verify all supported currencies exist
-docker exec -it postgres psql -U currency_user -d currency_db -c "
-SELECT COUNT(DISTINCT currency_code) as currency_count
-FROM exchange_rates;"
-
-# Check historical data completeness
-docker exec -it postgres psql -U currency_user -d currency_db -c "
-SELECT currency_code, COUNT(*) as history_count,
-       MIN(date) as oldest_date, MAX(date) as newest_date
-FROM historical_rates
-GROUP BY currency_code
-ORDER BY currency_code;"
-```
-
-### Service Deployment & Rollback
-
-#### Deploy New Version
+**Deploy New Version:**
 
 ```bash
 # Pull latest changes
 git pull origin main
 
-# Rebuild containers
+# Rebuild and deploy
 make rebuild
 
 # Verify deployment
 curl -f http://localhost:8000/health
 curl -f http://localhost:8000/api/v1/rates | jq .
 
-# Check logs for errors
+# Check for errors
 docker logs currency-api --tail=20
 ```
 
-#### Rollback Procedure
+**Rollback Procedure:**
 
 ```bash
 # Check current commit
 git log --oneline -5
-
-# Identify last known good commit
-git log --oneline -10
 
 # Rollback to specific commit
 git checkout <last_good_commit>
@@ -741,82 +956,109 @@ curl -f http://localhost:8000/health
 docker logs currency-api --tail=10
 ```
 
-### Container Management
+#### Service Management
 
-#### Service Restart Procedures
+**Container Operations:**
 
 ```bash
-# Graceful restart (recommended)
+# Graceful service restart
 docker restart currency-api
 
 # Force restart if unresponsive
-docker kill currency-api
+docker kill currency-api && docker start currency-api
+
+# Full stack operations
+make down    # Stop all services
+make up      # Start all services
+make rebuild # Rebuild and restart
+```
+
+### Data Management
+
+#### Database Operations
+
+> **Database Commands**: See [Common Commands Reference](#-common-commands-reference)
+> for detailed database diagnostic commands.
+
+**Backup and Restore:**
+
+```bash
+# Create timestamped backup
+docker exec postgres pg_dump -U currency_user -d currency_db > backup_$(date +%Y%m%d_%H%M%S).sql
+
+# Emergency restore (stops API service)
+docker stop currency-api
+gunzip -c backup_YYYYMMDD_HHMMSS.sql.gz | docker exec -i postgres psql -U currency_user -d currency_db
 docker start currency-api
-
-# Full stack restart
-make down
-make up
 ```
 
-#### Container Health Monitoring
+**Performance Maintenance:**
 
 ```bash
-# Check container status
-docker ps | grep -E "(currency|postgres|prometheus|grafana)"
+# Regular maintenance (run weekly)
+docker exec postgres psql -U currency_user -d currency_db -c "VACUUM ANALYZE;"
 
-# Check container resource usage
-docker stats --no-stream
-
-# Check container logs
-docker logs currency-api --tail=50 -f
-docker logs postgres --tail=20
-docker logs prometheus --tail=20
-docker logs grafana --tail=20
+# Check database health
+docker exec postgres psql -U currency_user -d currency_db -c "SELECT version();"
 ```
 
-#### Cleanup Procedures
+#### Exchange Rate Data
+
+**Data Updates:**
 
 ```bash
-# Remove old/dangling images
-docker image prune -f
+# Regenerate fresh rate data
+poetry run python scripts/generate_demo_data.py
 
-# Clean up unused volumes
-docker volume prune -f
+# Validate USD base currency (should always be 1.0)
+docker exec postgres psql -U currency_user -d currency_db -c "SELECT * FROM exchange_rates WHERE currency_code = 'USD';"
 
-# Clean up unused networks
-docker network prune -f
-
-# Full cleanup (use with caution)
-docker system prune -f
+# Check all 10 supported currencies exist
+docker exec postgres psql -U currency_user -d currency_db -c "SELECT COUNT(DISTINCT currency_code) FROM exchange_rates;"
 ```
 
-### Log Management
+#### Authentication Management
 
-#### Log Collection
+**JWT Operations:**
+
+> **JWT Commands**: See [Common Commands Reference](#-common-commands-reference) for JWT token generation.
+
+**Secret Rotation:**
 
 ```bash
-# Collect logs from all services
+# Generate new JWT secret and restart services
+openssl rand -hex 32    # Update JWT_SECRET_KEY in environment
+make down && make up    # Restart to pick up new secret
+```
+
+### System Maintenance
+
+#### Log Management
+
+**Log Collection (for incidents):**
+
+```bash
+# Collect timestamped logs from all services
 mkdir -p logs/$(date +%Y%m%d_%H%M%S)
 docker logs currency-api > logs/$(date +%Y%m%d_%H%M%S)/currency-api.log 2>&1
 docker logs postgres > logs/$(date +%Y%m%d_%H%M%S)/postgres.log 2>&1
-docker logs prometheus > logs/$(date +%Y%m%d_%H%M%S)/prometheus.log 2>&1
-docker logs grafana > logs/$(date +%Y%m%d_%H%M%S)/grafana.log 2>&1
 ```
 
-#### Log Analysis
+> **Log Analysis**: See [Common Commands Reference](#-common-commands-reference)
+> for detailed log analysis commands.
+
+#### System Cleanup
+
+**Regular Maintenance (run monthly):**
 
 ```bash
-# Search for errors in application logs
-docker logs currency-api --since=1h | grep -i error
+# Clean up Docker resources
+docker image prune -f    # Remove unused images
+docker volume prune -f   # Remove unused volumes
+docker network prune -f  # Remove unused networks
 
-# Search for specific error patterns
-docker logs currency-api --since=30m | grep -E "(500|timeout|connection|database)"
-
-# Check authentication failures
-docker logs currency-api --since=1h | grep -E "(401|403|unauthorized|forbidden)"
-
-# Analyze request patterns
-docker logs currency-api --since=1h | grep -E "(GET|POST)" | awk '{print $1}' | sort | uniq -c | sort -nr
+# Check disk usage
+df -h    # Ensure adequate free space for logs and database
 ```
 
 ---
@@ -1091,6 +1333,197 @@ curl -s http://localhost:8000/metrics | grep http_requests_total | grep status_c
 3. **Steps taken**: What diagnostic steps have been performed
 4. **Current status**: Service state, error rates, resource usage
 5. **Logs**: Relevant error messages or suspicious patterns
+
+---
+
+## 📚 COMMON COMMANDS REFERENCE
+
+### Database Diagnostic Commands
+
+#### Connection Analysis
+
+```bash
+# Check active database connections
+docker exec -it postgres psql -U currency_user -d currency_db -c "
+SELECT pid, usename, application_name, client_addr, state, query_start,
+       LEFT(query, 50) as query_preview
+FROM pg_stat_activity
+WHERE state != 'idle'
+ORDER BY query_start DESC;"
+
+# Check total connection count by state
+docker exec -it postgres psql -U currency_user -d currency_db -c "
+SELECT count(*) as connections, state
+FROM pg_stat_activity
+GROUP BY state;"
+
+# Check for connection limit issues
+docker exec -it postgres psql -U currency_user -d currency_db -c "
+SELECT setting as max_connections,
+       (SELECT count(*) FROM pg_stat_activity) as current_connections
+FROM pg_settings WHERE name = 'max_connections';"
+```
+
+#### Performance Analysis
+
+```bash
+# Check slow queries (if pg_stat_statements enabled)
+docker exec -it postgres psql -U currency_user -d currency_db -c "
+SELECT query, calls, total_time, mean_time, rows
+FROM pg_stat_statements
+ORDER BY mean_time DESC
+LIMIT 10;"
+
+# Check for blocking queries
+docker exec -it postgres psql -U currency_user -d currency_db -c "
+SELECT pid, state, wait_event, query
+FROM pg_stat_activity
+WHERE state != 'idle' AND wait_event IS NOT NULL;"
+
+# Check database locks
+docker exec -it postgres psql -U currency_user -d currency_db -c "
+SELECT t.relname, l.locktype, page, virtualtransaction, pid, mode, granted
+FROM pg_locks l, pg_stat_all_tables t
+WHERE l.relation = t.relid
+ORDER BY relation ASC;"
+```
+
+### Container Management Commands
+
+#### Status and Health Checks
+
+```bash
+# Check all service containers status
+docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
+
+# Check specific service health
+curl -f http://localhost:8000/health | jq .
+
+# Check resource usage across all containers
+docker stats --no-stream --format "table {{.Name}}\t{{.CPUPerc}}\t{{.MemUsage}}\t{{.MemPerc}}"
+
+# Check specific container resources
+docker stats currency-api --no-stream
+```
+
+#### Container Service Operations
+
+```bash
+# Restart specific service
+docker restart currency-api
+
+# View service logs (recent)
+docker logs currency-api --tail=50 -f
+
+# View service logs (time-based)
+docker logs currency-api --since=10m
+
+# Full stack restart
+make down && make up
+```
+
+### Log Analysis Commands
+
+#### Error Pattern Detection
+
+```bash
+# Find recent errors
+docker logs currency-api --since=10m | grep -i error
+
+# Search for specific error patterns
+docker logs currency-api --since=30m | grep -E "(500|timeout|connection|database)"
+
+# Check authentication failures
+docker logs currency-api --since=1h | grep -E "(401|403|unauthorized|forbidden)"
+```
+
+#### Traffic Analysis
+
+```bash
+# Count requests by IP
+docker logs currency-api --since=10m | grep -oE "[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+" | sort | uniq -c | sort -nr | head -10
+
+# Count requests by account
+docker logs currency-api --since=10m | grep -oE '"account_id":"[^"]*"' | sort | uniq -c | sort -nr | head -10
+
+# Count requests by user
+docker logs currency-api --since=10m | grep -oE '"user_id":"[^"]*"' | sort | uniq -c | sort -nr | head -10
+
+# Analyze endpoint usage
+docker logs currency-api --since=10m | grep -oE "(GET|POST) [^ ]+" | sort | uniq -c | sort -nr
+```
+
+### System Resource Commands
+
+#### System Health
+
+```bash
+# Check disk space
+df -h
+
+# Check memory usage
+free -h
+
+# Check system load
+uptime
+
+# Check network connectivity between containers
+docker network inspect demo_currency_app_default | jq '.[0].Containers'
+```
+
+#### Process Analysis
+
+```bash
+# Check container process info
+docker exec currency-api ps aux
+
+# Check file descriptor usage
+docker exec currency-api ls /proc/self/fd | wc -l
+docker exec currency-api ulimit -n
+
+# Check network connections
+docker exec currency-api netstat -an | grep ESTABLISHED | wc -l
+```
+
+### Monitoring Stack Commands
+
+#### Prometheus Queries
+
+```bash
+# Check if Prometheus is healthy
+curl -f http://localhost:9090/-/healthy
+
+# Common metrics queries (execute in Prometheus UI at http://localhost:9090)
+# Request rate: sum(rate(http_requests_total{job="currency-api"}[5m]))
+# Error rate: sum(rate(http_requests_total{job="currency-api",status_code=~"5.."}[5m])) / sum(rate(http_requests_total{job="currency-api"}[5m])) * 100
+# P95 latency: histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{job="currency-api"}[5m])) by (le))
+```
+
+#### Grafana Access
+
+```bash
+# Check Grafana health
+curl -f http://localhost:3000/api/health
+
+# Access Grafana dashboards at http://localhost:3000 (admin/admin)
+```
+
+### Authentication Commands
+
+#### JWT Token Management
+
+```bash
+# Generate test JWT token
+poetry run python -c "
+from currency_app.auth.jwt_auth import generate_jwt_token
+token = generate_jwt_token('test-account', 'test-user')
+print(f'JWT Token: {token}')
+"
+
+# Test API with JWT token
+TOKEN=$(poetry run python -c "from currency_app.auth.jwt_auth import generate_jwt_token; print(generate_jwt_token('test', 'test'))")
+curl -H "Authorization: Bearer $TOKEN" http://localhost:8000/api/v1/rates
+```
 
 ---
 

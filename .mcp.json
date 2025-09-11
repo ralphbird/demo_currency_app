@@ -27,7 +27,7 @@
         "GRAFANA_SERVICE_ACCOUNT_TOKEN": "${GRAFANA_SERVICE_ACCOUNT_TOKEN}"
       }
     },
-    "pagerduty-mcp": {
+    "pagerduty": {
       "command": "uv",
       "args": [
         "run",

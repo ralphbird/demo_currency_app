@@ -21,8 +21,8 @@ else:
     # PostgreSQL configuration for Docker/production
     engine = create_engine(
         DATABASE_URL,
-        pool_size=10,  # Connection pool size
-        max_overflow=20,  # Additional connections beyond pool_size
+        pool_size=50,  # Connection pool size (increased for high load)
+        max_overflow=100,  # Additional connections beyond pool_size (increased for high load)
         pool_recycle=3600,  # Recycle connections after 1 hour
         echo=False,  # Set to True for SQL debugging
     )

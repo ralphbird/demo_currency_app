@@ -22,14 +22,13 @@ services:
     networks:
       - currency-network
 
-  # FastAPI Currency Conversion API (local build)
+  # FastAPI Currency Conversion API (local build) - scaled to 2 replicas
   api:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: currency-api
-    ports:
-      - "8000:8000"
+    deploy:
+      replicas: 2
     volumes:
       # Persistent database storage
       - ./data:/app/data
@@ -62,6 +61,26 @@ services:
     restart: unless-stopped
     networks:
       - currency-network
+
+  # Nginx Load Balancer
+  nginx:
+    image: nginx:alpine
+    container_name: currency-nginx
+    ports:
+      - "8000:80"
+    volumes:
+      - ./docker/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - api
+    restart: unless-stopped
+    networks:
+      - currency-network
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost/nginx-health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
 
   # Prometheus for metrics collection
   prometheus:

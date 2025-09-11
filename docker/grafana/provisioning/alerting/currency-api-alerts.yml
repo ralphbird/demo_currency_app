@@ -116,10 +116,10 @@ groups:
               type: threshold
         noDataState: OK
         execErrState: Error
-        for: 2m
+        for: 1m
         keep_firing_for: 30s
         annotations:
-          description: "Currency API error rate is above 5% threshold for 2 minutes"
+          description: "Currency API error rate is above 5% threshold for 1 minute"
           summary: "High error rate detected in Currency API"
           severity: "critical"
           runbook_url: "https://github.com/ralphbird/demo_currency_app/blob/main/docs/runbook.md#currency-api-high-error-rate"
@@ -239,10 +239,10 @@ groups:
               type: threshold
         noDataState: OK
         execErrState: Error
-        for: 3m
+        for: 1m
         keep_firing_for: 30s
         annotations:
-          description: "Currency API CPU usage is above 80% for 3 minutes"
+          description: "Currency API CPU usage is above 80% for 1 minute"
           summary: "High CPU usage in Currency API"
           severity: "warning"
           runbook_url: "https://github.com/ralphbird/demo_currency_app/blob/main/docs/runbook.md#currency-api-high-cpu-usage"
@@ -301,10 +301,10 @@ groups:
               type: threshold
         noDataState: OK
         execErrState: Error
-        for: 5m
+        for: 1m
         keep_firing_for: 30s
         annotations:
-          description: "Currency API memory usage is above 1GB for 5 minutes"
+          description: "Currency API memory usage is above 1GB for 1 minute"
           summary: "High memory usage in Currency API"
           severity: "warning"
           runbook_url: "https://github.com/ralphbird/demo_currency_app/blob/main/docs/runbook.md#currency-api-high-memory-usage"
@@ -363,10 +363,10 @@ groups:
               type: threshold
         noDataState: OK
         execErrState: Error
-        for: 2m
+        for: 1m
         keep_firing_for: 30s
         annotations:
-          description: "Currency API is using over 80% of available file descriptors for 2 minutes"
+          description: "Currency API is using over 80% of available file descriptors for 1 minute"
           summary: "High file descriptor usage in Currency API"
           severity: "warning"
           runbook_url: "https://github.com/ralphbird/demo_currency_app/blob/main/docs/runbook.md#currency-api-high-file-descriptor-usage"
@@ -607,10 +607,10 @@ groups:
               type: threshold
         noDataState: OK
         execErrState: Error
-        for: 3m
+        for: 1m
         keep_firing_for: 30s
         annotations:
-          description: "Nginx load balancer has over 100 active connections for 3 minutes (potential overload or attack)"
+          description: "Nginx load balancer has over 100 active connections for 1 minute (potential overload or attack)"
           summary: "High connection count in Nginx load balancer"
           severity: "warning"
           runbook_url: "https://github.com/ralphbird/demo_currency_app/blob/main/docs/runbook.md#nginx-high-connections"
@@ -668,10 +668,10 @@ groups:
               type: threshold
         noDataState: OK
         execErrState: Error
-        for: 5m
+        for: 1m
         keep_firing_for: 30s
         annotations:
-          description: "Nginx load balancer request rate has dropped below 0.1 RPS for 5 minutes (potential service disruption)"
+          description: "Nginx load balancer request rate has dropped below 0.1 RPS for 1 minute (potential service disruption)"
           summary: "Low request rate in Nginx load balancer"
           severity: "warning"
           runbook_url: "https://github.com/ralphbird/demo_currency_app/blob/main/docs/runbook.md#nginx-request-rate-drop"

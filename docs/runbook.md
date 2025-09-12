@@ -322,34 +322,76 @@ mcp__grafana__query_prometheus(
 
 #### Immediate Response (Target: 2 minutes)
 
-1. **Verify the alert is accurate:**
+1. **Verify the alert is accurate using MCP tools:**
 
-   ```bash
-   # Check if containers are running
-   docker ps | grep currency
+   ```python
+   # Check if service is up via Prometheus metrics
+   mcp__grafana__query_prometheus(
+       datasourceUid="prometheus",
+       expr='up{job="currency-api"}',
+       queryType="instant",
+       startTime="now"
+   )
 
-   # Check service health endpoint
-   curl -f http://localhost:8000/health || echo "Service unreachable"
+   # Check recent API response success rate
+   mcp__grafana__query_prometheus(
+       datasourceUid="prometheus",
+       expr='rate(http_requests_total{job="currency-api",status_code="200"}[5m])',
+       queryType="instant",
+       startTime="now"
+   )
    ```
 
-2. **Check container status:**
+2. **Check service status and recent errors:**
 
-   ```bash
-   # View all service containers
-   make logs
+   ```python
+   # Check recent application logs for errors
+   mcp__grafana__query_loki_logs(
+       datasourceUid="loki",
+       logql='{job="containerlogs"} |= "error" or |= "ERROR" or |= "exception"',
+       startRfc3339="[5_MINUTES_AGO]",
+       endRfc3339="[NOW]",
+       limit=20,
+       direction="backward"
+   )
 
-   # Check specific currency API logs
-   docker logs currency-api --tail=50 -f
+   # Check service startup and health logs
+   mcp__grafana__query_loki_logs(
+       datasourceUid="loki",
+       logql='{job="containerlogs"} |= "currency-api" |= "startup" or |= "health"',
+       startRfc3339="[10_MINUTES_AGO]",
+       endRfc3339="[NOW]",
+       limit=15
+   )
    ```
 
 3. **Quick restart attempt:**
 
    ```bash
-   # Restart the currency service
+   # Restart the currency service (operational command)
    docker restart currency-api
+   ```
 
-   # Monitor restart progress
-   docker logs currency-api --tail=20 -f
+   **Monitor restart progress using MCP:**
+
+   ```python
+   # Check if service comes back up
+   mcp__grafana__query_prometheus(
+       datasourceUid="prometheus",
+       expr='up{job="currency-api"}',
+       queryType="instant",
+       startTime="now"
+   )
+
+   # Monitor restart logs and errors
+   mcp__grafana__query_loki_logs(
+       datasourceUid="loki",
+       logql='{job="containerlogs"} |= "currency-api"',
+       startRfc3339="[2_MINUTES_AGO]",
+       endRfc3339="[NOW]",
+       limit=20,
+       direction="backward"
+   )
    ```
 
 #### Deep Investigation (if restart fails)
@@ -367,14 +409,35 @@ mcp__grafana__query_prometheus(
    docker info
    ```
 
-2. **Examine recent logs for errors:**
+2. **Examine recent logs for errors using MCP:**
 
-   ```bash
-   # Application errors
-   docker logs currency-api --since=10m | grep -i error
+   ```python
+   # Application errors from structured logs
+   mcp__grafana__query_loki_logs(
+       datasourceUid="loki",
+       logql='{job="containerlogs"} |= "currency-api" |= "error" or |= "ERROR" or |= "exception"',
+       startRfc3339="[10_MINUTES_AGO]",
+       endRfc3339="[NOW]",
+       limit=30
+   )
 
-   # Database connection issues
-   docker logs postgres --since=10m | grep -i error
+   # Database connection and error patterns
+   mcp__grafana__query_loki_logs(
+       datasourceUid="loki",
+       logql='{job="containerlogs"} |= "postgres" or |= "database" |= "error" or |= "connection"',
+       startRfc3339="[10_MINUTES_AGO]",
+       endRfc3339="[NOW]",
+       limit=25
+   )
+
+   # Check for service startup failures
+   mcp__grafana__query_loki_logs(
+       datasourceUid="loki",
+       logql='{job="containerlogs"} |= "failed" or |= "timeout" or |= "crash"',
+       startRfc3339="[15_MINUTES_AGO]",
+       endRfc3339="[NOW]",
+       limit=20
+   )
    ```
 
 3. **Full stack restart (if needed):**
@@ -400,15 +463,33 @@ mcp__grafana__query_prometheus(
 
 #### Error Rate Immediate Response (Target: 3 minutes)
 
-1. **Identify error patterns:**
+1. **Identify error patterns using MCP:**
 
-   ```bash
-   # Check recent application logs for 5xx errors
-   docker logs currency-api --since=5m | grep -E "50[0-9]"
+   ```python
+   # Check recent 5xx errors from structured logs
+   mcp__grafana__query_loki_logs(
+       datasourceUid="loki",
+       logql='{job="containerlogs"} |= "50" |= "status_code" or |= "500" or |= "502" or |= "503"',
+       startRfc3339="[5_MINUTES_AGO]",
+       endRfc3339="[NOW]",
+       limit=30
+   )
 
-   # Check error patterns in Prometheus
-   # Navigate to: http://localhost:9090
-   # Query: sum(rate(http_requests_total{job="currency-api",status_code=~"5.."}[5m]))
+   # Check error rate metrics from Prometheus
+   mcp__grafana__query_prometheus(
+       datasourceUid="prometheus",
+       expr='sum(rate(http_requests_total{job="currency-api",status_code=~"5.."}[5m]))',
+       queryType="instant",
+       startTime="now"
+   )
+
+   # Check error rate percentage
+   mcp__grafana__query_prometheus(
+       datasourceUid="prometheus",
+       expr='sum(rate(http_requests_total{job="currency-api",status_code=~"5.."}[5m])) / sum(rate(http_requests_total{job="currency-api"}[5m])) * 100',
+       queryType="instant",
+       startTime="now"
+   )
    ```
 
 2. **Check database connectivity:**
@@ -425,14 +506,39 @@ mcp__grafana__query_prometheus(
    ORDER BY query_start;"
    ```
 
-3. **Examine resource constraints:**
+3. **Examine resource constraints using MCP:**
 
-   ```bash
-   # Check if API container is resource-constrained
-   docker stats currency-api --no-stream
+   ```python
+   # Check container resource usage via Prometheus
+   mcp__grafana__query_prometheus(
+       datasourceUid="prometheus",
+       expr='container_memory_usage_bytes{name="currency-api"}',
+       queryType="instant",
+       startTime="now"
+   )
 
-   # Check file descriptor usage
-   docker exec currency-api ls -la /proc/self/fd | wc -l
+   mcp__grafana__query_prometheus(
+       datasourceUid="prometheus",
+       expr='rate(container_cpu_usage_seconds_total{name="currency-api"}[5m]) * 100',
+       queryType="instant",
+       startTime="now"
+   )
+
+   # Check nginx connection patterns for resource correlation
+   mcp__grafana__query_prometheus(
+       datasourceUid="prometheus",
+       expr='nginx_connections_active',
+       queryType="instant",
+       startTime="now"
+   )
+
+   # Monitor current request load
+   mcp__grafana__query_prometheus(
+       datasourceUid="prometheus",
+       expr='rate(http_requests_total{job="currency-api"}[5m])',
+       queryType="instant",
+       startTime="now"
+   )
    ```
 
 #### Resolution Steps
@@ -486,16 +592,37 @@ classify the load pattern.
 
 **After completing load source analysis, perform these request-rate specific checks:**
 
-```bash
-# Check current request rate in Prometheus
-# Navigate to: http://localhost:9090
-# Query: sum(rate(http_requests_total{job="currency-api"}[2m]))
+```python
+# Check current request rate using MCP Prometheus
+mcp__grafana__query_prometheus(
+    datasourceUid="prometheus",
+    expr='sum(rate(http_requests_total{job="currency-api"}[2m]))',
+    queryType="instant",
+    startTime="now"
+)
 
 # Monitor system impact from high request rate
-docker stats currency-api --no-stream
+mcp__grafana__query_prometheus(
+    datasourceUid="prometheus",
+    expr='rate(container_cpu_usage_seconds_total{name="currency-api"}[5m]) * 100',
+    queryType="instant",
+    startTime="now"
+)
 
-# Check response times to see if high rate is affecting performance
-curl -w "@curl-format.txt" -o /dev/null -s http://localhost:8000/health
+mcp__grafana__query_prometheus(
+    datasourceUid="prometheus",
+    expr='container_memory_usage_bytes{name="currency-api"} / 1024 / 1024',
+    queryType="instant",
+    startTime="now"
+)
+
+# Check response times from production metrics
+mcp__grafana__query_prometheus(
+    datasourceUid="prometheus",
+    expr='histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{job="currency-api"}[5m])) by (le)) * 1000',
+    queryType="instant",
+    startTime="now"
+)
 ```
 
 #### Step 3: Request Rate Resolution Actions
@@ -530,21 +657,49 @@ classify the load pattern.
 
 #### Step 2: CPU-Specific Diagnostics
 
-**After completing load source analysis, perform these CPU-specific checks:**
+**After completing load source analysis, perform these CPU-specific checks using MCP:**
 
-```bash
-# Correlate CPU spike with request volume
-docker logs currency-api --since=5m | wc -l
-docker stats currency-api --no-stream
+```python
+# Correlate CPU spike with request volume using metrics
+mcp__grafana__query_prometheus(
+    datasourceUid="prometheus",
+    expr='rate(http_requests_total{job="currency-api"}[5m])',
+    queryType="instant",
+    startTime="now"
+)
+
+mcp__grafana__query_prometheus(
+    datasourceUid="prometheus",
+    expr='rate(container_cpu_usage_seconds_total{name="currency-api"}[5m]) * 100',
+    queryType="instant",
+    startTime="now"
+)
 
 # Check for processing errors that might cause CPU loops
-docker logs currency-api --since=5m | grep -i -E "error|exception|timeout|retry"
+mcp__grafana__query_loki_logs(
+    datasourceUid="loki",
+    logql='{job="containerlogs"} |= "error" or |= "exception" or |= "timeout" or |= "retry"',
+    startRfc3339="[5_MINUTES_AGO]",
+    endRfc3339="[NOW]",
+    limit=30
+)
 
 # Check for database query issues causing high CPU
-docker logs currency-api --since=5m | grep -i -E "query|database|sql"
+mcp__grafana__query_loki_logs(
+    datasourceUid="loki",
+    logql='{job="containerlogs"} |= "query" or |= "database" or |= "sql" or |= "postgres"',
+    startRfc3339="[5_MINUTES_AGO]",
+    endRfc3339="[NOW]",
+    limit=25
+)
 
-# Check host system CPU usage
-top -p $(docker inspect --format='{{.State.Pid}}' currency-api)
+# Check memory usage correlation with CPU spikes
+mcp__grafana__query_prometheus(
+    datasourceUid="prometheus",
+    expr='container_memory_usage_bytes{name="currency-api"} / 1024 / 1024',
+    queryType="instant",
+    startTime="now"
+)
 ```
 
 #### Step 3: CPU Resolution Actions
@@ -1376,41 +1531,89 @@ LIMIT 10;"
 
 #### Application Performance Analysis
 
-```bash
-# Check response time distribution
-curl -s http://localhost:9090/api/v1/query?query='histogram_quantile(0.50,%20sum(rate(http_request_duration_seconds_bucket%5B5m%5D))%20by%20(le))' | jq '.data.result[0].value[1]'
-curl -s http://localhost:9090/api/v1/query?query='histogram_quantile(0.90,%20sum(rate(http_request_duration_seconds_bucket%5B5m%5D))%20by%20(le))' | jq '.data.result[0].value[1]'
-curl -s http://localhost:9090/api/v1/query?query='histogram_quantile(0.99,%20sum(rate(http_request_duration_seconds_bucket%5B5m%5D))%20by%20(le))' | jq '.data.result[0].value[1]'
+```python
+# Check response time distribution using MCP Prometheus
+mcp__grafana__query_prometheus(
+    datasourceUid="prometheus",
+    expr='histogram_quantile(0.50, sum(rate(http_request_duration_seconds_bucket{job="currency-api"}[5m])) by (le)) * 1000',
+    queryType="instant",
+    startTime="now"
+)
 
-# Check endpoint-specific metrics
-curl -s http://localhost:8000/metrics | grep http_requests_total | grep -E "(convert|rates|health)"
+mcp__grafana__query_prometheus(
+    datasourceUid="prometheus",
+    expr='histogram_quantile(0.90, sum(rate(http_request_duration_seconds_bucket{job="currency-api"}[5m])) by (le)) * 1000',
+    queryType="instant",
+    startTime="now"
+)
 
-# Check error rates by endpoint
-curl -s http://localhost:8000/metrics | grep http_requests_total | grep status_code
+mcp__grafana__query_prometheus(
+    datasourceUid="prometheus",
+    expr='histogram_quantile(0.99, sum(rate(http_request_duration_seconds_bucket{job="currency-api"}[5m])) by (le)) * 1000',
+    queryType="instant",
+    startTime="now"
+)
+
+# Check endpoint-specific request rates and patterns
+mcp__grafana__query_prometheus(
+    datasourceUid="prometheus",
+    expr='sum(rate(http_requests_total{job="currency-api"}[5m])) by (endpoint)',
+    queryType="instant",
+    startTime="now"
+)
+
+# Check error rates by endpoint and status code
+mcp__grafana__query_prometheus(
+    datasourceUid="prometheus",
+    expr='sum(rate(http_requests_total{job="currency-api"}[5m])) by (status_code)',
+    queryType="instant",
+    startTime="now"
+)
 ```
 
 ### Troubleshooting Common Issues
 
 #### "Service Unavailable" Errors
 
-1. **Check container status:**
+1. **Check service status using MCP:**
 
-   ```bash
-   docker ps | grep currency-api
-   docker logs currency-api --tail=20
+   ```python
+   # Check if service is up via Prometheus
+   mcp__grafana__query_prometheus(
+       datasourceUid="prometheus",
+       expr='up{job="currency-api"}',
+       queryType="instant",
+       startTime="now"
+   )
+
+   # Check recent service logs for errors
+   mcp__grafana__query_loki_logs(
+       datasourceUid="loki",
+       logql='{job="containerlogs"} |= "currency-api" |= "error" or |= "started" or |= "stopped"',
+       startRfc3339="[10_MINUTES_AGO]",
+       endRfc3339="[NOW]",
+       limit=20
+   )
    ```
 
-2. **Verify port binding:**
+2. **Verify service health and performance:**
 
-   ```bash
-   netstat -tlnp | grep :8000
-   docker port currency-api
-   ```
+   ```python
+   # Check recent successful requests
+   mcp__grafana__query_prometheus(
+       datasourceUid="prometheus",
+       expr='rate(http_requests_total{job="currency-api",status_code="200"}[5m])',
+       queryType="instant",
+       startTime="now"
+   )
 
-3. **Test direct container access:**
-
-   ```bash
-   docker exec currency-api curl -f http://localhost:8000/health
+   # Check current response times
+   mcp__grafana__query_prometheus(
+       datasourceUid="prometheus",
+       expr='histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{job="currency-api"}[5m])) by (le))',
+       queryType="instant",
+       startTime="now"
+   )
    ```
 
 #### Database Connection Issues

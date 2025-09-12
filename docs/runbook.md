@@ -37,71 +37,141 @@ Docker/system commands.
 
 #### Step 1: Multi-Dimensional Traffic Analysis
 
-**Identify traffic patterns across IP, Account, and User dimensions:**
+**Identify traffic patterns across IP, Account, and User dimensions using MCP Grafana tools:**
 
-```bash
-# Analyze request sources by IP address
-docker logs currency-api --since=10m | grep -oE "[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+" | sort | uniq -c | sort -nr | head -10
+```python
+# Analyze request sources by IP and account patterns
+mcp__grafana__query_loki_logs(
+    datasourceUid="loki",
+    logql='{job="containerlogs"} |= "POST"',
+    startRfc3339="[10_MINUTES_AGO]",
+    endRfc3339="[NOW]",
+    limit=50,
+    direction="backward"
+)
 
-# Get top IP for detailed analysis
-TOP_IP=$(docker logs currency-api --since=10m | grep -oE "[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+" | sort | uniq -c | sort -nr | head -1 | awk '{print $2}')
-echo "Top IP: $TOP_IP - Request count:"
-docker logs currency-api --since=10m | grep "$TOP_IP" | wc -l
+# Search for specific suspicious IP patterns
+mcp__grafana__query_loki_logs(
+    datasourceUid="loki",
+    logql='{job="containerlogs"} |= "[SUSPICIOUS_IP]"',
+    startRfc3339="[START_TIME]",
+    endRfc3339="[END_TIME]",
+    limit=30
+)
 
-# Analyze by account ID patterns
-docker logs currency-api --since=10m | grep -oE '"account_id":"[^"]*"' | sort | uniq -c | sort -nr | head -10
+# Analyze account ID patterns from structured logs
+mcp__grafana__query_loki_logs(
+    datasourceUid="loki",
+    logql='{job="containerlogs"} |= "account_id"',
+    startRfc3339="[START_TIME]",
+    endRfc3339="[END_TIME]",
+    limit=20
+)
 
-# Analyze by user ID patterns
-docker logs currency-api --since=10m | grep -oE '"user_id":"[^"]*"' | sort | uniq -c | sort -nr | head -10
+# Check current nginx connection metrics
+mcp__grafana__query_prometheus(
+    datasourceUid="prometheus",
+    expr="nginx_connections_active",
+    queryType="instant",
+    startTime="now"
+)
 
-# Get top account for detailed analysis
-TOP_ACCOUNT=$(docker logs currency-api --since=10m | grep -oE '"account_id":"[^"]*"' | sort | uniq -c | sort -nr | head -1 | awk '{print $2}')
-echo "Top account: $TOP_ACCOUNT - Request count:"
-docker logs currency-api --since=10m | grep "$TOP_ACCOUNT" | wc -l
-
-# Check users within top account
-echo "Users in top account:"
-docker logs currency-api --since=10m | grep "$TOP_ACCOUNT" | grep -oE '"user_id":"[^"]*"' | sort | uniq -c | sort -nr
+# Check request rate patterns
+mcp__grafana__query_prometheus(
+    datasourceUid="prometheus",
+    expr="rate(nginx_http_requests_total[5m])",
+    queryType="instant",
+    startTime="now"
+)
 ```
 
 #### Step 2: Behavioral Pattern Analysis
 
-**Analyze authentication and request patterns:**
+**Analyze authentication and request patterns using MCP tools:**
 
-```bash
-# Check authentication failures by account/user
-docker logs currency-api --since=10m | grep -E "(401|403)" | grep -oE '"account_id":"[^"]*"' | sort | uniq -c | sort -nr | head -5
+```python
+# Check authentication failures by searching for error status codes
+mcp__grafana__query_loki_logs(
+    datasourceUid="loki",
+    logql='{job="containerlogs"} |= "401" or |= "403"',
+    startRfc3339="[10_MINUTES_AGO]",
+    endRfc3339="[NOW]",
+    limit=20
+)
 
-# Look for rapid-fire requests from same account/user combinations
-docker logs currency-api --since=5m | grep -E '"account_id":"[^"]*".*"user_id":"[^"]*"' | sort | uniq -c | sort -nr | head -5
+# Look for rapid-fire requests with account/user patterns
+mcp__grafana__query_loki_logs(
+    datasourceUid="loki",
+    logql='{job="containerlogs"} |= "account_id" |= "user_id"',
+    startRfc3339="[5_MINUTES_AGO]",
+    endRfc3339="[NOW]",
+    limit=25
+)
 
-# Check for rate limit violations
-docker logs currency-api --since=10m | grep -E "(rate.*limit|too.*many.*requests)" | grep -oE '"account_id":"[^"]*"' | sort | uniq -c
+# Check for rate limiting activity (429 responses)
+mcp__grafana__query_loki_logs(
+    datasourceUid="loki",
+    logql='{job="containerlogs"} |= "429" or |= "rate" or |= "limit"',
+    startRfc3339="[10_MINUTES_AGO]",
+    endRfc3339="[NOW]",
+    limit=15
+)
 
-# Analyze endpoint usage patterns
-docker logs currency-api --since=10m | grep -oE "(GET|POST) [^ ]+" | sort | uniq -c | sort -nr
-
-# Check for unusual user agent patterns
-docker logs currency-api --since=10m | grep -oE 'User-Agent: [^"]*' | sort | uniq -c | sort -nr | head -5
+# Analyze endpoint usage patterns and user agents
+mcp__grafana__query_loki_logs(
+    datasourceUid="loki",
+    logql='{job="containerlogs"} |= "POST" or |= "GET"',
+    startRfc3339="[10_MINUTES_AGO]",
+    endRfc3339="[NOW]",
+    limit=30
+)
 ```
 
 #### Step 3: Resource Correlation Analysis
 
-**Correlate load patterns with system resources:**
+**Correlate load patterns with system resources using MCP tools:**
 
-```bash
-# Check current system resources
-docker stats currency-api --no-stream
+```python
+# Check current nginx connection metrics and system load
+mcp__grafana__query_prometheus(
+    datasourceUid="prometheus",
+    expr="nginx_connections_active",
+    queryType="instant",
+    startTime="now"
+)
 
-# Correlate request volume with resource usage
-echo "Request count in last 5 minutes:"
-docker logs currency-api --since=5m | wc -l
+mcp__grafana__query_prometheus(
+    datasourceUid="prometheus",
+    expr="nginx_connections_writing",
+    queryType="instant",
+    startTime="now"
+)
 
-# Check for large responses that might impact memory
-docker logs currency-api --since=10m | grep -E "200.*[0-9]{4,}" | grep -oE '"account_id":"[^"]*"' | sort | uniq -c | sort -nr | head -5
+# Check request volume trends over time
+mcp__grafana__query_prometheus(
+    datasourceUid="prometheus",
+    expr="rate(nginx_http_requests_total[5m])",
+    queryType="instant",
+    startTime="now"
+)
 
-# Check for data-heavy endpoint usage by account
-docker logs currency-api --since=10m | grep -E "(history|rates|convert)" | grep -oE '"account_id":"[^"]*"' | sort | uniq -c | sort -nr | head-5
+# Analyze high response time patterns that might indicate resource stress
+mcp__grafana__query_loki_logs(
+    datasourceUid="loki",
+    logql='{job="containerlogs"} |= "response_time_ms"',
+    startRfc3339="[10_MINUTES_AGO]",
+    endRfc3339="[NOW]",
+    limit=20
+)
+
+# Check for data-heavy endpoint usage (convert/rates/history)
+mcp__grafana__query_loki_logs(
+    datasourceUid="loki",
+    logql='{job="containerlogs"} |= "convert" or |= "rates" or |= "history"',
+    startRfc3339="[10_MINUTES_AGO]",
+    endRfc3339="[NOW]",
+    limit=25
+)
 ```
 
 #### Step 4: Load Classification Decision Tree
@@ -153,6 +223,92 @@ Load Source Analysis Results:
 - Correlation with Resources: [CPU/Memory/Response time correlation]
 - Recommended Action: [Based on classification above]
 ```
+
+---
+
+## 🛡️ SECURITY ESCALATION PROCEDURES
+
+### Attack Pattern Recognition (CRITICAL ADDITION)
+
+**Immediate Security Escalation Required When:**
+
+1. **External IP Indicators:**
+   - Single external IP >50% of total traffic
+   - IP with no legitimate business relationship
+   - Non-browser user agents (Python, curl, automated tools)
+
+2. **Behavioral Red Flags:**
+   - Multiple synthetic account/user combinations from same IP
+   - Sustained high-frequency requests (>100 req/min per IP)
+   - Targeting business-critical endpoints exclusively
+   - Automated tool signatures in user agents (aiohttp, requests, etc.)
+
+3. **Resource Impact:**
+   - >200% threshold overrun with concentrated source
+   - Sustained load >10 minutes from single source
+   - Evidence of evasion tactics (account cycling, IP rotation)
+
+### Security Incident Creation Process
+
+**When attack patterns detected, use MCP PagerDuty tools:**
+
+```python
+# Create security incident with complete evidence package
+mcp__pagerduty__create_incident(
+    create_model={
+        "incident": {
+            "title": "SECURITY ALERT: Automated Attack Against Currency API - IP [ATTACKER_IP]",
+            "service": {"id": "P7C7J0L", "summary": "security"},
+            "urgency": "high",
+            "body": {
+                "details": "SECURITY INCIDENT: [Complete attack analysis with IP, patterns, impact, and evidence]"
+            }
+        }
+    }
+)
+```
+
+### Security Evidence Collection (MCP-Based)
+
+```python
+# Collect comprehensive attack evidence using MCP tools
+# 1. Identify suspicious IP patterns
+mcp__grafana__query_loki_logs(
+    datasourceUid="loki",
+    logql='{job="containerlogs"} |= "[SUSPICIOUS_IP]"',
+    startRfc3339="[ATTACK_START]",
+    endRfc3339="[ATTACK_END]",
+    limit=30
+)
+
+# 2. Document account/user abuse patterns
+mcp__grafana__query_loki_logs(
+    datasourceUid="loki",
+    logql='{job="containerlogs"} |= "account_id" |= "[SUSPICIOUS_IP]"',
+    startRfc3339="[ATTACK_START]",
+    endRfc3339="[ATTACK_END]",
+    limit=20
+)
+
+# 3. Analyze attack impact on system resources
+mcp__grafana__query_prometheus(
+    datasourceUid="prometheus",
+    expr="nginx_connections_active",
+    queryType="range",
+    startTime="[ATTACK_START]",
+    endTime="[ATTACK_END]",
+    stepSeconds=60
+)
+```
+
+### Parallel Actions Required
+
+**During security escalation:**
+
+1. **Continue infrastructure mitigation** (rate limiting, blocking)
+2. **Document all attack characteristics** for investigation
+3. **Preserve logs and evidence** for forensic analysis
+4. **Coordinate with security team** on blocking recommendations
 
 ---
 
@@ -1337,6 +1493,95 @@ curl -s http://localhost:8000/metrics | grep http_requests_total | grep status_c
 ---
 
 ## 📚 COMMON COMMANDS REFERENCE
+
+### MCP Tools for Incident Response (PREFERRED)
+
+#### Traffic Analysis and Load Source Investigation
+
+```python
+# Check current system metrics (nginx connections, request rates)
+mcp__grafana__query_prometheus(
+    datasourceUid="prometheus",
+    expr="nginx_connections_active",
+    queryType="instant",
+    startTime="now"
+)
+
+mcp__grafana__query_prometheus(
+    datasourceUid="prometheus",
+    expr="rate(nginx_http_requests_total[5m])",
+    queryType="instant",
+    startTime="now"
+)
+
+# Search logs for suspicious IP patterns
+mcp__grafana__query_loki_logs(
+    datasourceUid="loki",
+    logql='{job="containerlogs"} |= "[SUSPICIOUS_IP]"',
+    startRfc3339="[INCIDENT_START]",
+    endRfc3339="[NOW]",
+    limit=30
+)
+
+# Analyze account/user patterns for attack detection
+mcp__grafana__query_loki_logs(
+    datasourceUid="loki",
+    logql='{job="containerlogs"} |= "account_id"',
+    startRfc3339="[INCIDENT_START]",
+    endRfc3339="[NOW]",
+    limit=25
+)
+```
+
+#### Security Incident Management
+
+```python
+# Create security incident for attack patterns
+mcp__pagerduty__create_incident(
+    create_model={
+        "incident": {
+            "title": "SECURITY ALERT: [Attack Description]",
+            "service": {"id": "P7C7J0L", "summary": "security"},
+            "urgency": "high",
+            "body": {"details": "[Complete attack evidence and analysis]"}
+        }
+    }
+)
+
+# Add incident updates with findings
+mcp__pagerduty__add_note_to_incident(
+    incident_id="[INCIDENT_ID]",
+    note="[Analysis results and mitigation status]"
+)
+
+# Resolve incidents after mitigation
+mcp__pagerduty__manage_incidents(
+    manage_request={"incident_ids": ["[INCIDENT_ID]"], "status": "resolved"}
+)
+```
+
+#### System Health Monitoring
+
+```python
+# Monitor nginx connection trends over time
+mcp__grafana__query_prometheus(
+    datasourceUid="prometheus",
+    expr="nginx_connections_active",
+    queryType="range",
+    startTime="[30_MINUTES_AGO]",
+    endTime="now",
+    stepSeconds=60
+)
+
+# Check for rate limiting effectiveness
+mcp__grafana__query_loki_logs(
+    datasourceUid="loki",
+    logql='{job="containerlogs"} |= "429" or |= "rate" or |= "limit"',
+    startRfc3339="[POST_MITIGATION]",
+    endRfc3339="[NOW]",
+    limit=20
+)
+```
 
 ### Database Diagnostic Commands
 

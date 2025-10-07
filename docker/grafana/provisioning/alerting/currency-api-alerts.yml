@@ -55,7 +55,7 @@ groups:
               type: threshold
         noDataState: NoData
         execErrState: Error
-        for: 30s
+        for: 10s
         keep_firing_for: 30s
         annotations:
           description: "The Currency API service is not responding"
@@ -116,7 +116,7 @@ groups:
               type: threshold
         noDataState: OK
         execErrState: Error
-        for: 1m
+        for: 10s
         keep_firing_for: 30s
         annotations:
           description: "Currency API error rate is above 5% threshold for 1 minute"
@@ -177,7 +177,7 @@ groups:
               type: threshold
         noDataState: OK
         execErrState: Error
-        for: 1m
+        for: 10s
         keep_firing_for: 30s
         annotations:
           description: "Currency API is receiving elevated request volume (>250 RPS averaged over 1 minute for 1 minute)"
@@ -239,7 +239,7 @@ groups:
               type: threshold
         noDataState: OK
         execErrState: Error
-        for: 1m
+        for: 10s
         keep_firing_for: 30s
         annotations:
           description: "Currency API CPU usage is above 80% for 1 minute"
@@ -301,7 +301,7 @@ groups:
               type: threshold
         noDataState: OK
         execErrState: Error
-        for: 1m
+        for: 10s
         keep_firing_for: 30s
         annotations:
           description: "Currency API memory usage is above 1GB for 1 minute"
@@ -363,7 +363,7 @@ groups:
               type: threshold
         noDataState: OK
         execErrState: Error
-        for: 1m
+        for: 10s
         keep_firing_for: 30s
         annotations:
           description: "Currency API is using over 80% of available file descriptors for 1 minute"
@@ -424,7 +424,7 @@ groups:
               type: threshold
         noDataState: OK
         execErrState: Error
-        for: 1m
+        for: 10s
         keep_firing_for: 30s
         annotations:
           description: "Currency API 95th percentile response time is above 1 second for 1 minute (potential attack impact)"
@@ -485,7 +485,7 @@ groups:
               type: threshold
         noDataState: OK
         execErrState: Error
-        for: 1m
+        for: 10s
         keep_firing_for: 30s
         annotations:
           description: "Currency API average response time is above 500ms for 1 minute (indicating system stress)"
@@ -546,7 +546,7 @@ groups:
               type: threshold
         noDataState: NoData
         execErrState: Error
-        for: 1m
+        for: 10s
         keep_firing_for: 30s
         annotations:
           description: "The Nginx load balancer is not responding - all API traffic will fail"
@@ -607,7 +607,7 @@ groups:
               type: threshold
         noDataState: OK
         execErrState: Error
-        for: 1m
+        for: 10s
         keep_firing_for: 30s
         annotations:
           description: "Nginx load balancer has over 100 active connections for 1 minute (potential overload or attack)"
@@ -668,7 +668,7 @@ groups:
               type: threshold
         noDataState: OK
         execErrState: Error
-        for: 1m
+        for: 10s
         keep_firing_for: 30s
         annotations:
           description: "Nginx load balancer request rate has dropped below 0.1 RPS for 1 minute (potential service disruption)"

@@ -38,8 +38,31 @@ DATABASE_OPERATIONS_TOTAL = Counter(
     ["operation", "table", "status"],
 )
 
-DATABASE_CONNECTION_POOL = Gauge(
-    "database_connections_active", "Number of active database connections"
+DATABASE_CONNECTION_POOL_SIZE = Gauge(
+    "database_connection_pool_size", "Configured database connection pool size"
+)
+
+DATABASE_CONNECTION_POOL_ACTIVE = Gauge(
+    "database_connection_pool_active", "Number of active database connections"
+)
+
+DATABASE_CONNECTION_POOL_CHECKED_OUT = Gauge(
+    "database_connection_pool_checked_out", "Number of checked out database connections"
+)
+
+DATABASE_CONNECTION_TIMEOUTS = Counter(
+    "database_connection_timeouts_total", "Total number of database connection timeouts"
+)
+
+DATABASE_QUERY_DURATION = Histogram(
+    "database_query_duration_seconds",
+    "Database query duration in seconds",
+    ["operation", "table"],
+    buckets=[0.001, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0, 10.0],
+)
+
+DATABASE_CONNECTION_ERRORS = Counter(
+    "database_connection_errors_total", "Total number of database connection errors", ["error_type"]
 )
 
 
@@ -133,3 +156,41 @@ def record_database_operation(operation: str, table: str, *, success: bool = Tru
     """Record database operation metrics."""
     status = "success" if success else "error"
     DATABASE_OPERATIONS_TOTAL.labels(operation=operation, table=table, status=status).inc()
+
+
+def record_database_query_duration(operation: str, table: str, duration: float):
+    """Record database query duration."""
+    DATABASE_QUERY_DURATION.labels(operation=operation, table=table).observe(duration)
+
+
+def record_database_connection_timeout():
+    """Record database connection timeout."""
+    DATABASE_CONNECTION_TIMEOUTS.inc()
+
+
+def record_database_connection_error(error_type: str):
+    """Record database connection error."""
+    DATABASE_CONNECTION_ERRORS.labels(error_type=error_type).inc()
+
+
+def update_connection_pool_metrics(engine):
+    """Update connection pool metrics from SQLAlchemy engine."""
+    try:
+        pool = engine.pool
+
+        # Set pool size
+        DATABASE_CONNECTION_POOL_SIZE.set(pool.size())
+
+        # Set active connections (checked out)
+        DATABASE_CONNECTION_POOL_CHECKED_OUT.set(pool.checkedout())
+
+        # Calculate available connections
+        active_connections = pool.checkedout()
+        DATABASE_CONNECTION_POOL_ACTIVE.set(active_connections)
+
+    except AttributeError:
+        # Handle case where pool doesn't support these methods (e.g., SQLite)
+        pass
+    except Exception as e:
+        # Log error but don't fail
+        record_database_connection_error(f"pool_metrics_error_{type(e).__name__}")

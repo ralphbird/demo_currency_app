@@ -30,6 +30,15 @@ scrape_configs:
     scrape_timeout: 5s
     scheme: http
 
+  # PostgreSQL database metrics
+  - job_name: "postgres"
+    static_configs:
+      - targets: ["postgres-exporter:9187"]
+    metrics_path: "/metrics"
+    scrape_interval: 15s
+    scrape_timeout: 10s
+    scheme: http
+
   # Additional services can be added here as needed
 
   # cAdvisor container metrics (ARM64 compatible)

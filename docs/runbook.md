@@ -20,6 +20,10 @@ Docker/system commands.
 - Prometheus: <http://localhost:9090>
 - Jaeger Tracing: <http://localhost:16686>
 
+**Repository:**
+
+- Source Code: <https://github.com/ralphbird/demo_currency_app>
+
 ---
 
 ## 🔍 LOAD SOURCE ANALYSIS PROCEDURES

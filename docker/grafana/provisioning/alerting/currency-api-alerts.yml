@@ -157,7 +157,7 @@ groups:
             model:
               conditions:
                 - evaluator:
-                    params: [250]
+                    params: [100]
                     type: gt
                   operator:
                     type: and
@@ -180,7 +180,7 @@ groups:
         for: 10s
         keep_firing_for: 30s
         annotations:
-          description: "Currency API is receiving elevated request volume (>250 RPS averaged over 1 minute for 1 minute)"
+          description: "Currency API is receiving elevated request volume (>100 RPS averaged over 1 minute for 1 minute)"
           summary: "Elevated request rate in Currency API"
           severity: "warning"
           runbook_url: "https://github.com/ralphbird/demo_currency_app/blob/main/docs/runbook.md#currency-api-high-request-rate"

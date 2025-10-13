@@ -679,3 +679,370 @@ groups:
           severity: warning
         notification_settings:
           receiver: pagerduty-warning
+
+
+      # Critical: Database Connection Timeouts
+      - uid: database-connection-timeouts
+        title: Database Connection Timeouts
+        condition: C
+        data:
+          - refId: A
+            queryType: ""
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: prometheus
+            model:
+              editorMode: code
+              expr: increase(database_connection_timeouts_total[2m])
+              instant: true
+              intervalMs: 1000
+              legendFormat: __auto
+              maxDataPoints: 43200
+              range: false
+              refId: A
+          - refId: C
+            queryType: ""
+            relativeTimeRange:
+              from: 0
+              to: 0
+            datasourceUid: "__expr__"
+            model:
+              conditions:
+                - evaluator:
+                    params: [5]
+                    type: gt
+                  operator:
+                    type: and
+                  query:
+                    params: [C]
+                  reducer:
+                    params: []
+                    type: last
+                  type: query
+              datasource:
+                type: __expr__
+                uid: __expr__
+              expression: A
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: C
+              type: threshold
+        noDataState: OK
+        execErrState: Error
+        for: 30s
+        keep_firing_for: 60s
+        annotations:
+          description: "More than 5 database connection timeouts occurred in the last 2 minutes"
+          summary: "Database connection timeouts occurring"
+          severity: "critical"
+          runbook_url: "https://github.com/ralphbird/demo_currency_app/blob/main/docs/runbook.md#database-connection-timeouts"
+        labels:
+          severity: critical
+        notification_settings:
+          receiver: pagerduty-critical
+
+      # Warning: High Database Query Latency
+      - uid: database-query-latency-high
+        title: Database Query Latency High
+        condition: C
+        data:
+          - refId: A
+            queryType: ""
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: prometheus
+            model:
+              editorMode: code
+              expr: histogram_quantile(0.95, rate(database_query_duration_seconds_bucket[2m])) * 1000
+              instant: true
+              intervalMs: 1000
+              legendFormat: __auto
+              maxDataPoints: 43200
+              range: false
+              refId: A
+          - refId: C
+            queryType: ""
+            relativeTimeRange:
+              from: 0
+              to: 0
+            datasourceUid: "__expr__"
+            model:
+              conditions:
+                - evaluator:
+                    params: [1000]
+                    type: gt
+                  operator:
+                    type: and
+                  query:
+                    params: [C]
+                  reducer:
+                    params: []
+                    type: last
+                  type: query
+              datasource:
+                type: __expr__
+                uid: __expr__
+              expression: A
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: C
+              type: threshold
+        noDataState: OK
+        execErrState: Error
+        for: 60s
+        keep_firing_for: 60s
+        annotations:
+          description: "Database query 95th percentile latency is above 1 second for 1 minute"
+          summary: "High database query latency detected"
+          severity: "warning"
+          runbook_url: "https://github.com/ralphbird/demo_currency_app/blob/main/docs/runbook.md#database-query-latency-high"
+        labels:
+          severity: warning
+        notification_settings:
+          receiver: pagerduty-warning
+
+      # Warning: PostgreSQL Too Many Connections
+      - uid: postgresql-too-many-connections
+        title: PostgreSQL Too Many Connections
+        condition: C
+        data:
+          - refId: A
+            queryType: ""
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: prometheus
+            model:
+              editorMode: code
+              expr: sum(pg_stat_activity_count{datname="currency_db"})
+              instant: true
+              intervalMs: 1000
+              legendFormat: __auto
+              maxDataPoints: 43200
+              range: false
+              refId: A
+          - refId: C
+            queryType: ""
+            relativeTimeRange:
+              from: 0
+              to: 0
+            datasourceUid: "__expr__"
+            model:
+              conditions:
+                - evaluator:
+                    params: [50]
+                    type: gt
+                  operator:
+                    type: and
+                  query:
+                    params: [C]
+                  reducer:
+                    params: []
+                    type: last
+                  type: query
+              datasource:
+                type: __expr__
+                uid: __expr__
+              expression: A
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: C
+              type: threshold
+        noDataState: OK
+        execErrState: Error
+        for: 60s
+        keep_firing_for: 60s
+        annotations:
+          description: "PostgreSQL has over 50 active connections to currency_db database"
+          summary: "PostgreSQL connection count high"
+          severity: "warning"
+          runbook_url: "https://github.com/ralphbird/demo_currency_app/blob/main/docs/runbook.md#postgresql-too-many-connections"
+        labels:
+          severity: warning
+        notification_settings:
+          receiver: pagerduty-warning
+
+      # Critical: PostgreSQL Database Down
+      - uid: postgresql-database-down
+        title: PostgreSQL Database Down
+        condition: C
+        data:
+          - refId: A
+            queryType: ""
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: prometheus
+            model:
+              editorMode: code
+              expr: up{job="postgres"}
+              instant: true
+              intervalMs: 1000
+              legendFormat: __auto
+              maxDataPoints: 43200
+              range: false
+              refId: A
+          - refId: C
+            queryType: ""
+            relativeTimeRange:
+              from: 0
+              to: 0
+            datasourceUid: "__expr__"
+            model:
+              conditions:
+                - evaluator:
+                    params: [1]
+                    type: ne
+                  operator:
+                    type: and
+                  query:
+                    params: [C]
+                  reducer:
+                    params: []
+                    type: last
+                  type: query
+              datasource:
+                type: __expr__
+                uid: __expr__
+              expression: A
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: C
+              type: threshold
+        noDataState: NoData
+        execErrState: Error
+        for: 30s
+        keep_firing_for: 60s
+        annotations:
+          description: "PostgreSQL database is not responding - all database operations will fail"
+          summary: "PostgreSQL database is down"
+          severity: "critical"
+          runbook_url: "https://github.com/ralphbird/demo_currency_app/blob/main/docs/runbook.md#postgresql-database-down"
+        labels:
+          severity: critical
+        notification_settings:
+          receiver: pagerduty-critical
+
+      # Warning: PostgreSQL Deadlocks
+      - uid: postgresql-deadlocks
+        title: PostgreSQL Deadlocks Detected
+        condition: C
+        data:
+          - refId: A
+            queryType: ""
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: prometheus
+            model:
+              editorMode: code
+              expr: increase(pg_stat_database_deadlocks[5m])
+              instant: true
+              intervalMs: 1000
+              legendFormat: __auto
+              maxDataPoints: 43200
+              range: false
+              refId: A
+          - refId: C
+            queryType: ""
+            relativeTimeRange:
+              from: 0
+              to: 0
+            datasourceUid: "__expr__"
+            model:
+              conditions:
+                - evaluator:
+                    params: [1]
+                    type: gt
+                  operator:
+                    type: and
+                  query:
+                    params: [C]
+                  reducer:
+                    params: []
+                    type: last
+                  type: query
+              datasource:
+                type: __expr__
+                uid: __expr__
+              expression: A
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: C
+              type: threshold
+        noDataState: OK
+        execErrState: Error
+        for: 30s
+        keep_firing_for: 60s
+        annotations:
+          description: "PostgreSQL deadlocks detected in the last 5 minutes - potential performance impact"
+          summary: "PostgreSQL deadlocks occurring"
+          severity: "warning"
+          runbook_url: "https://github.com/ralphbird/demo_currency_app/blob/main/docs/runbook.md#postgresql-deadlocks"
+        labels:
+          severity: warning
+        notification_settings:
+          receiver: pagerduty-warning
+
+      # Warning: Database Error Rate High
+      - uid: database-error-rate-high
+        title: Database Error Rate High
+        condition: C
+        data:
+          - refId: A
+            queryType: ""
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: prometheus
+            model:
+              editorMode: code
+              expr: rate(database_connection_errors_total[2m])
+              instant: true
+              intervalMs: 1000
+              legendFormat: __auto
+              maxDataPoints: 43200
+              range: false
+              refId: A
+          - refId: C
+            queryType: ""
+            relativeTimeRange:
+              from: 0
+              to: 0
+            datasourceUid: "__expr__"
+            model:
+              conditions:
+                - evaluator:
+                    params: [0.5]
+                    type: gt
+                  operator:
+                    type: and
+                  query:
+                    params: [C]
+                  reducer:
+                    params: []
+                    type: last
+                  type: query
+              datasource:
+                type: __expr__
+                uid: __expr__
+              expression: A
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: C
+              type: threshold
+        noDataState: OK
+        execErrState: Error
+        for: 60s
+        keep_firing_for: 60s
+        annotations:
+          description: "Database error rate is above 0.5 errors/second for 1 minute"
+          summary: "High database error rate detected"
+          severity: "warning"
+          runbook_url: "https://github.com/ralphbird/demo_currency_app/blob/main/docs/runbook.md#database-error-rate-high"
+        labels:
+          severity: warning
+        notification_settings:
+          receiver: pagerduty-warning

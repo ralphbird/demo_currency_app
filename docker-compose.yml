@@ -96,6 +96,23 @@ services:
     networks:
       - currency-network
 
+  # PostgreSQL Prometheus Exporter
+  postgres-exporter:
+    image: prometheuscommunity/postgres-exporter:v0.10.1
+    container_name: currency-postgres-exporter
+    environment:
+      - DATA_SOURCE_NAME=postgresql://currency_user:currency_pass@postgres:5432/currency_db?sslmode=disable
+      - PG_EXPORTER_DISABLE_DEFAULT_METRICS=false
+      - PG_EXPORTER_DISABLE_SETTINGS_METRICS=true
+    ports:
+      - "9187:9187"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - currency-network
+
   # Prometheus for metrics collection
   prometheus:
     image: prom/prometheus:latest

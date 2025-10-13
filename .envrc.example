@@ -1,0 +1,7 @@
+export COMPOSE_BAKE=true
+export GRAFANA_SERVICE_ACCOUNT_TOKEN=
+export GITHUB_TOKEN=
+# PagerDuty User API Token (for PagerDuty MCP integration)
+# Generate at: PagerDuty > User Settings > User API Tokens
+# Note: This is different from the integration key used in .env
+export PAGERDUTY_USER_API_KEY=

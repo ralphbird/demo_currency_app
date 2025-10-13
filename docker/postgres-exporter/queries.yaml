@@ -1,0 +1,218 @@
+pg_database:
+  query: "SELECT pg_database.datname, pg_database_size(pg_database.datname) as size_bytes FROM pg_database"
+  master: true
+  cache_seconds: 30
+  metrics:
+    - datname:
+        usage: "LABEL"
+        description: "Name of the database"
+    - size_bytes:
+        usage: "GAUGE"
+        description: "Disk space used by the database"
+
+pg_stat_database:
+  query: |
+    SELECT
+      datname,
+      numbackends,
+      tup_returned,
+      tup_fetched,
+      tup_inserted,
+      tup_updated,
+      tup_deleted,
+      conflicts,
+      temp_files,
+      temp_bytes,
+      deadlocks,
+      blk_read_time,
+      blk_write_time
+    FROM pg_stat_database
+    WHERE datname = current_database()
+  master: true
+  cache_seconds: 30
+  metrics:
+    - datname:
+        usage: "LABEL"
+        description: "Name of the database"
+    - numbackends:
+        usage: "GAUGE"
+        description: "Number of backends currently connected to this database"
+    - tup_returned:
+        usage: "COUNTER"
+        description: "Number of rows returned by queries in this database"
+    - tup_fetched:
+        usage: "COUNTER"
+        description: "Number of rows fetched by queries in this database"
+    - tup_inserted:
+        usage: "COUNTER"
+        description: "Number of rows inserted by queries in this database"
+    - tup_updated:
+        usage: "COUNTER"
+        description: "Number of rows updated by queries in this database"
+    - tup_deleted:
+        usage: "COUNTER"
+        description: "Number of rows deleted by queries in this database"
+    - conflicts:
+        usage: "COUNTER"
+        description: "Number of queries canceled due to conflicts with recovery"
+    - temp_files:
+        usage: "COUNTER"
+        description: "Number of temporary files created by queries"
+    - temp_bytes:
+        usage: "COUNTER"
+        description: "Total amount of data written to temporary files by queries"
+    - deadlocks:
+        usage: "COUNTER"
+        description: "Number of deadlocks detected in this database"
+    - blk_read_time:
+        usage: "COUNTER"
+        description: "Time spent reading data file blocks by backends in this database"
+    - blk_write_time:
+        usage: "COUNTER"
+        description: "Time spent writing data file blocks by backends in this database"
+
+pg_stat_activity:
+  query: |
+    SELECT
+      state,
+      COUNT(*) as count,
+      COALESCE(EXTRACT(EPOCH FROM (now() - min(query_start))), 0) as oldest_query_seconds
+    FROM pg_stat_activity
+    WHERE state IS NOT NULL
+    GROUP BY state
+  master: true
+  cache_seconds: 30
+  metrics:
+    - state:
+        usage: "LABEL"
+        description: "Current overall state of this backend"
+    - count:
+        usage: "GAUGE"
+        description: "Number of connections in this state"
+    - oldest_query_seconds:
+        usage: "GAUGE"
+        description: "Age of the oldest query in this state (seconds)"
+
+pg_locks:
+  query: |
+    SELECT
+      mode,
+      locktype,
+      COUNT(*) as count
+    FROM pg_locks
+    GROUP BY mode, locktype
+  master: true
+  cache_seconds: 30
+  metrics:
+    - mode:
+        usage: "LABEL"
+        description: "Name of the lock mode held or desired by this process"
+    - locktype:
+        usage: "LABEL"
+        description: "Type of lockable object"
+    - count:
+        usage: "GAUGE"
+        description: "Number of locks of this mode and type"
+
+pg_stat_user_tables:
+  query: |
+    SELECT
+      schemaname,
+      relname,
+      seq_scan,
+      seq_tup_read,
+      idx_scan,
+      idx_tup_fetch,
+      n_tup_ins,
+      n_tup_upd,
+      n_tup_del,
+      n_tup_hot_upd,
+      n_live_tup,
+      n_dead_tup,
+      vacuum_count,
+      autovacuum_count,
+      analyze_count,
+      autoanalyze_count
+    FROM pg_stat_user_tables
+  master: true
+  cache_seconds: 30
+  metrics:
+    - schemaname:
+        usage: "LABEL"
+        description: "Name of the schema that this table is in"
+    - relname:
+        usage: "LABEL"
+        description: "Name of this table"
+    - seq_scan:
+        usage: "COUNTER"
+        description: "Number of sequential scans initiated on this table"
+    - seq_tup_read:
+        usage: "COUNTER"
+        description: "Number of live rows fetched by sequential scans"
+    - idx_scan:
+        usage: "COUNTER"
+        description: "Number of index scans initiated on this table"
+    - idx_tup_fetch:
+        usage: "COUNTER"
+        description: "Number of live rows fetched by index scans"
+    - n_tup_ins:
+        usage: "COUNTER"
+        description: "Number of rows inserted"
+    - n_tup_upd:
+        usage: "COUNTER"
+        description: "Number of rows updated"
+    - n_tup_del:
+        usage: "COUNTER"
+        description: "Number of rows deleted"
+    - n_tup_hot_upd:
+        usage: "COUNTER"
+        description: "Number of rows HOT updated"
+    - n_live_tup:
+        usage: "GAUGE"
+        description: "Estimated number of live rows"
+    - n_dead_tup:
+        usage: "GAUGE"
+        description: "Estimated number of dead rows"
+    - vacuum_count:
+        usage: "COUNTER"
+        description: "Number of times this table has been manually vacuumed"
+    - autovacuum_count:
+        usage: "COUNTER"
+        description: "Number of times this table has been vacuumed by the autovacuum daemon"
+    - analyze_count:
+        usage: "COUNTER"
+        description: "Number of times this table has been manually analyzed"
+    - autoanalyze_count:
+        usage: "COUNTER"
+        description: "Number of times this table has been analyzed by the autovacuum daemon"
+
+pg_connection_pool_metrics:
+  query: |
+    SELECT
+      'currency_db' as database_name,
+      (SELECT setting::int FROM pg_settings WHERE name = 'max_connections') as max_connections,
+      (SELECT count(*) FROM pg_stat_activity) as active_connections,
+      (SELECT count(*) FROM pg_stat_activity WHERE state = 'active') as running_connections,
+      (SELECT count(*) FROM pg_stat_activity WHERE state = 'idle') as idle_connections,
+      (SELECT count(*) FROM pg_stat_activity WHERE state = 'idle in transaction') as idle_in_transaction_connections
+  master: true
+  cache_seconds: 15
+  metrics:
+    - database_name:
+        usage: "LABEL"
+        description: "Name of the database"
+    - max_connections:
+        usage: "GAUGE"
+        description: "Maximum number of concurrent connections to the database server"
+    - active_connections:
+        usage: "GAUGE"
+        description: "Total number of active database connections"
+    - running_connections:
+        usage: "GAUGE"
+        description: "Number of connections currently executing queries"
+    - idle_connections:
+        usage: "GAUGE"
+        description: "Number of idle database connections"
+    - idle_in_transaction_connections:
+        usage: "GAUGE"
+        description: "Number of connections idle in a transaction"
